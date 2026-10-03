@@ -176,6 +176,48 @@ Mean ± sample standard deviation over seeds; ACC, sensitivity and specificity a
 | AUC | -0.0071 | 0.0072 | [0.962, 0.985] vs [0.962, 0.985] | yes | 0 of 5 | **no significant difference** |
 | ACC | -0.0144 | 0.0216 | [0.904, 0.944] vs [0.913, 0.950] | yes | 1 of 5 | **no significant difference** |
 
+## noise
+
+| Circuit simulation | Kind of error | Test AUC | Test ACC | Δ AUC vs exact (paired) | Δ ACC vs exact (paired) |
+|---|---|---|---|---|---|
+| exact simulation | none | 0.9748 ± 0.0036 | 0.916 ± 0.028 | +0.0000 ± 0.0000 | +0.0000 ± 0.0000 |
+| shots=1000 | sampling | 0.9746 ± 0.0037 | 0.914 ± 0.031 | -0.0002 ± 0.0003 | -0.0016 ± 0.0030 |
+| p=0.001 | depolarising after each layer | 0.9748 ± 0.0036 | 0.916 ± 0.028 | +0.0000 ± 0.0000 | +0.0000 ± 0.0000 |
+| p=0.01 | depolarising after each layer | 0.9748 ± 0.0036 | 0.916 ± 0.028 | +0.0000 ± 0.0000 | +0.0000 ± 0.0000 |
+| p=0.05 | depolarising after each layer | 0.9748 ± 0.0036 | 0.915 ± 0.029 | +0.0000 ± 0.0000 | -0.0006 ± 0.0009 |
+| readout 1% | unequal readout errors | 0.9748 ± 0.0036 | 0.916 ± 0.028 | +0.0000 ± 0.0000 | +0.0000 ± 0.0000 |
+| readout 3% | unequal readout errors | 0.9748 ± 0.0036 | 0.915 ± 0.029 | +0.0000 ± 0.0000 | -0.0010 ± 0.0009 |
+| readout 5% | unequal readout errors | 0.9748 ± 0.0036 | 0.915 ± 0.029 | +0.0000 ± 0.0000 | -0.0006 ± 0.0009 |
+| device x1 | gate + damping + readout errors | 0.9748 ± 0.0036 | 0.915 ± 0.029 | +0.0000 ± 0.0000 | -0.0006 ± 0.0009 |
+| device x3 | gate + damping + readout errors | 0.9748 ± 0.0036 | 0.915 ± 0.027 | +0.0000 ± 0.0001 | -0.0006 ± 0.0018 |
+| device x10 | gate + damping + readout errors | 0.9748 ± 0.0035 | 0.919 ± 0.030 | +0.0000 ± 0.0002 | +0.0029 ± 0.0125 |
+| miscalibration 0.02 rad | coherent angle errors | 0.9746 ± 0.0036 | 0.913 ± 0.028 | -0.0002 ± 0.0003 | -0.0022 ± 0.0027 |
+| miscalibration 0.05 rad | coherent angle errors | 0.9733 ± 0.0040 | 0.910 ± 0.030 | -0.0014 ± 0.0019 | -0.0054 ± 0.0057 |
+| miscalibration 0.1 rad | coherent angle errors | 0.9701 ± 0.0076 | 0.909 ± 0.032 | -0.0047 ± 0.0058 | -0.0064 ± 0.0075 |
+
+Same trained weights, no retraining; mean ± std over 5 seeds; Δ = noisy minus exact for the same seed. shots: each <Z> estimated from 1,000 measurements. p: depolarising channel on every qubit after every layer. readout: unequal per-qubit bit-flip errors with this mean. device xk: 0.1% single-qubit and 1% two-qubit gate errors, 0.1% amplitude and phase damping per layer and 2% mean readout error, all multiplied by k. miscalibration: every circuit angle off by a fixed random N(0, sigma) amount. Order-of-magnitude illustrations, not calibrated models of a real device.
+
+## noise_matched
+
+| Circuit simulation | Kind of error | Test AUC | Test ACC | Δ AUC vs exact (paired) | Δ ACC vs exact (paired) |
+|---|---|---|---|---|---|
+| exact simulation | none | 0.9753 ± 0.0040 | 0.916 ± 0.023 | +0.0000 ± 0.0000 | +0.0000 ± 0.0000 |
+| shots=1000 | sampling | 0.9755 ± 0.0039 | 0.918 ± 0.023 | +0.0003 ± 0.0005 | +0.0019 ± 0.0013 |
+| p=0.001 | depolarising after each layer | 0.9753 ± 0.0040 | 0.917 ± 0.022 | +0.0000 ± 0.0000 | +0.0003 ± 0.0007 |
+| p=0.01 | depolarising after each layer | 0.9754 ± 0.0039 | 0.916 ± 0.022 | +0.0001 ± 0.0001 | +0.0000 ± 0.0034 |
+| p=0.05 | depolarising after each layer | 0.9757 ± 0.0037 | 0.913 ± 0.028 | +0.0004 ± 0.0006 | -0.0032 ± 0.0150 |
+| readout 1% | unequal readout errors | 0.9753 ± 0.0040 | 0.916 ± 0.023 | +0.0000 ± 0.0000 | +0.0000 ± 0.0000 |
+| readout 3% | unequal readout errors | 0.9753 ± 0.0039 | 0.916 ± 0.022 | +0.0000 ± 0.0001 | +0.0000 ± 0.0011 |
+| readout 5% | unequal readout errors | 0.9753 ± 0.0039 | 0.916 ± 0.023 | +0.0000 ± 0.0001 | -0.0003 ± 0.0018 |
+| device x1 | gate + damping + readout errors | 0.9754 ± 0.0039 | 0.915 ± 0.024 | +0.0001 ± 0.0002 | -0.0013 ± 0.0076 |
+| device x3 | gate + damping + readout errors | 0.9756 ± 0.0038 | 0.913 ± 0.036 | +0.0003 ± 0.0005 | -0.0029 ± 0.0262 |
+| device x10 | gate + damping + readout errors | 0.9754 ± 0.0059 | 0.475 ± 0.137 | +0.0001 ± 0.0033 | -0.4413 ± 0.1399 |
+| miscalibration 0.02 rad | coherent angle errors | 0.9751 ± 0.0043 | 0.918 ± 0.023 | -0.0001 ± 0.0006 | +0.0019 ± 0.0026 |
+| miscalibration 0.05 rad | coherent angle errors | 0.9748 ± 0.0048 | 0.920 ± 0.023 | -0.0004 ± 0.0014 | +0.0032 ± 0.0041 |
+| miscalibration 0.1 rad | coherent angle errors | 0.9743 ± 0.0059 | 0.921 ± 0.022 | -0.0010 ± 0.0030 | +0.0042 ± 0.0046 |
+
+Same trained weights, no retraining; mean ± std over 5 seeds; Δ = noisy minus exact for the same seed. shots: each <Z> estimated from 1,000 measurements. p: depolarising channel on every qubit after every layer. readout: unequal per-qubit bit-flip errors with this mean. device xk: 0.1% single-qubit and 1% two-qubit gate errors, 0.1% amplitude and phase damping per layer and 2% mean readout error, all multiplied by k. miscalibration: every circuit angle off by a fixed random N(0, sigma) amount. Order-of-magnitude illustrations, not calibrated models of a real device.
+
 ## threshold
 
 | Model | Val-tuned threshold | Test ACC at 0.5 | Test ACC at tuned | Sensitivity at tuned | Specificity at tuned | Balanced acc. at tuned | Ensemble ACC at tuned |
@@ -212,6 +254,24 @@ Hybrid vs classical control with the variant chosen on validation data (v2 + TTA
 |---|---|---|---|---|---|---|
 | AUC | -0.0104 | 0.0163 | [0.962, 0.988] vs [0.972, 0.991] | yes | 0 of 5 | **no significant difference** |
 | ACC | -0.0119 | 0.0280 | [0.904, 0.946] vs [0.909, 0.949] | yes | 2 of 5 | **no significant difference** |
+
+The same comparison for v2:
+
+**A = Hybrid 8q x 1L, 60 epochs, EMA, B = Classical control (8 units), 60 epochs, EMA**
+
+| Metric | Mean A − B | Larger seed std | Ensemble 95% CI, A vs B | CIs overlap | Seeds where A > B | Verdict |
+|---|---|---|---|---|---|---|
+| AUC | -0.0073 | 0.0103 | [0.967, 0.990] vs [0.975, 0.992] | yes | 1 of 5 | **no significant difference** |
+| ACC | -0.0099 | 0.0143 | [0.923, 0.960] vs [0.931, 0.965] | yes | 2 of 5 | **no significant difference** |
+
+The same comparison for v1 + TTA:
+
+**A = Hybrid 8q x 1L + TTA, B = Classical control (8 units) + TTA**
+
+| Metric | Mean A − B | Larger seed std | Ensemble 95% CI, A vs B | CIs overlap | Seeds where A > B | Verdict |
+|---|---|---|---|---|---|---|
+| AUC | -0.0029 | 0.0028 | [0.964, 0.987] vs [0.970, 0.989] | yes | 0 of 5 | **no significant difference** |
+| ACC | -0.0244 | 0.0364 | [0.886, 0.933] vs [0.896, 0.939] | yes | 1 of 5 | **no significant difference** |
 
 ## devices
 

@@ -173,6 +173,11 @@ Every judgement call made while building this project, with the reason. Newest p
   except wall-clock times), so the changes did not move any result. The real time savings are in orchestration:
   the noise study now runs one process per seed (results do not depend on the number of processes, because every
   seed's sampling is seeded and cached), and the GPU is available for single runs.
+- **Density-matrix noise runs in batches of 32 images.** With 256-image batches, five parallel processes of the
+  3-layer circuit took about 2 GB each, free memory fell to 0.1 GB and Windows started swapping, so progress
+  stalled. The density-matrix simulation is deterministic and per image, so the batch size cannot change its
+  results: recomputing one cached setting with 32-image batches matched the 256-image result to 6e-8 (float32
+  precision). Finite-shot settings keep the original batches, because their random draws are tied to them.
 - **GPU in a separate environment (`.venv-gpu`)**: installing CUDA PyTorch into `.venv` would replace the CPU build
   that produced every committed result and could change its last digits. The GPU build is the same PyTorch
   version (2.14.1) for CUDA 13.0, which supports the RTX 5060. PennyLane's `default.qubit` creates its starting

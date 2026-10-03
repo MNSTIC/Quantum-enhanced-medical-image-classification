@@ -180,6 +180,18 @@ py -3.13 -m venv .venv-gpu
 Measured with `src/benchmark.py`, one run at a time:
 
 <!-- results:devices -->
+| Model | Device | CPU threads | PyTorch build | Seconds per epoch |
+|---|---|---|---|---|
+| hybrid (final, 8q x 1L) | cpu | 2 | 2.14.1+cu130 | 5.52 |
+| classical control | cpu | 2 | 2.14.1+cu130 | 3.77 |
+| hybrid (final, 8q x 1L) | cpu | 8 | 2.14.1+cu130 | 4.18 |
+| classical control | cpu | 8 | 2.14.1+cu130 | 2.40 |
+| hybrid (final, 8q x 1L) | cuda (NVIDIA GeForce RTX 5060 Laptop GPU) | 2 | 2.14.1+cu130 | 3.69 |
+| classical control | cuda (NVIDIA GeForce RTX 5060 Laptop GPU) | 2 | 2.14.1+cu130 | 1.06 |
+| hybrid (final, 8q x 1L) | cuda (NVIDIA GeForce RTX 5060 Laptop GPU) | 8 | 2.14.1+cu130 | 3.57 |
+| classical control | cuda (NVIDIA GeForce RTX 5060 Laptop GPU) | 8 | 2.14.1+cu130 | 1.08 |
+
+One training epoch plus one validation pass, mean of epochs 2-3 (epoch 1 is warm-up), one run at a time. Every reported result was trained on the CPU with 2 threads, which is bit-for-bit reproducible; GPU arithmetic differs slightly.
 <!-- /results:devices -->
 
 ## Project layout

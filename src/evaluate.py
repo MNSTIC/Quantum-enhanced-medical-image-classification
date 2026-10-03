@@ -375,6 +375,18 @@ def noisy_layer(cfg: Config, trained: torch.nn.Module, setting: str, seed: int) 
     return layer
 
 
+@cache
+def noise_loader(size: int) -> DataLoader:
+    """The test images in batches of 32 for the density-matrix simulator.
+
+    Each image's 8-qubit density matrix is 256 x 256 complex numbers and the simulator copies it several times
+    per gate, so 256-image batches need gigabytes per process. The simulation is deterministic and per image,
+    so the batch size does not change the results. (Finite-shot settings keep the standard loader: their
+    random draws are tied to the batches.)
+    """
+    return DataLoader(test_loader(size).dataset, batch_size=32, shuffle=False, num_workers=0)
+
+
 def noise_for_seed(d: Path, threads: int = 2) -> pd.DataFrame:
     """Test probabilities of one trained hybrid under every noise setting; cached in noise_predictions.csv.
 
@@ -390,7 +402,8 @@ def noise_for_seed(d: Path, threads: int = 2) -> pd.DataFrame:
             continue
         _, model = load_model(d)
         model.middle = noisy_layer(cfg, model.middle, setting, int(d.name[4:]))
-        df[setting] = predict(model, test_loader(cfg.size))[0]
+        mixed = bool(NOISE_SETTINGS[setting][1].keys() & {"noise_p", "readout", "device_scale"})
+        df[setting] = predict(model, noise_loader(cfg.size) if mixed else test_loader(cfg.size))[0]
         df.to_csv(f, index=False)   # saved after every setting, so an interrupted run resumes here
         print(f"  noise {d.parent.name}/{d.name} {setting}: AUC {compute_metrics(y, df[setting].to_numpy())['auc']:.4f}",
               flush=True)

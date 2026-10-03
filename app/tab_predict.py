@@ -34,7 +34,9 @@ class PredictTab(ttk.Frame):
         groups = trained_groups()
         default = "hybrid_q8_l1" if "hybrid_q8_l1" in groups else (groups[0] if groups else "")
         self.group = tk.StringVar(value=default)
-        ttk.Combobox(bar, textvariable=self.group, values=groups, width=30, state="readonly").pack(side="left", padx=4)
+        box = ttk.Combobox(bar, textvariable=self.group, values=groups, width=30, state="readonly")
+        box.configure(postcommand=lambda: box.configure(values=trained_groups()))   # include runs trained since start
+        box.pack(side="left", padx=4)
         ttk.Button(bar, text="Open image...", command=self.open_image).pack(side="left", padx=4)
         ttk.Button(bar, text="Random validation image", command=self.random_val).pack(side="left", padx=4)
         ttk.Label(bar, text="  Explain seed:").pack(side="left")
