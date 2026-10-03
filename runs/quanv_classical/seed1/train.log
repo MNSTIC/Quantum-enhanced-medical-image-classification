@@ -1,0 +1,32 @@
+runs\quanv_classical\seed1: 56,853 params (20 in probed block), pos_weight 0.347
+  ep  1  loss 0.3090  acc 0.774 | val loss 0.2350  auc 0.9396  acc 0.865 | grad 7.98e-02 | 7.3s  *
+  ep  2  loss 0.2008  acc 0.841 | val loss 0.3117  auc 0.9595  acc 0.500 | grad 1.38e-01 | 7.5s  *
+  ep  3  loss 0.1476  acc 0.888 | val loss 0.1647  auc 0.9694  acc 0.918 | grad 1.52e-01 | 7.4s  *
+  ep  4  loss 0.1168  acc 0.911 | val loss 0.0990  auc 0.9818  acc 0.916 | grad 1.80e-01 | 7.3s  *
+  ep  5  loss 0.1013  acc 0.923 | val loss 0.2278  auc 0.9701  acc 0.899 | grad 1.76e-01 | 9.9s
+  ep  6  loss 0.0904  acc 0.928 | val loss 0.1679  auc 0.9836  acc 0.784 | grad 1.89e-01 | 9.7s  *
+  ep  7  loss 0.0883  acc 0.931 | val loss 0.3000  auc 0.9810  acc 0.653 | grad 1.90e-01 | 7.9s
+  ep  8  loss 0.0823  acc 0.936 | val loss 0.0725  auc 0.9896  acc 0.947 | grad 2.19e-01 | 7.4s  *
+  ep  9  loss 0.0804  acc 0.936 | val loss 0.1043  auc 0.9901  acc 0.874 | grad 2.07e-01 | 8.2s  *
+  ep 10  loss 0.0724  acc 0.942 | val loss 1.1393  auc 0.9748  acc 0.334 | grad 1.72e-01 | 8.0s
+  ep 11  loss 0.0684  acc 0.945 | val loss 0.0797  auc 0.9864  acc 0.941 | grad 1.92e-01 | 8.1s
+  ep 12  loss 0.0768  acc 0.940 | val loss 0.0901  auc 0.9927  acc 0.887 | grad 2.00e-01 | 7.3s  *
+  ep 13  loss 0.0650  acc 0.948 | val loss 0.0553  auc 0.9936  acc 0.958 | grad 1.84e-01 | 7.5s  *
+  ep 14  loss 0.0696  acc 0.947 | val loss 0.0662  auc 0.9923  acc 0.933 | grad 2.01e-01 | 10.4s
+  ep 15  loss 0.0633  acc 0.951 | val loss 0.0506  auc 0.9952  acc 0.956 | grad 2.14e-01 | 9.4s  *
+  ep 16  loss 0.0624  acc 0.952 | val loss 0.0560  auc 0.9931  acc 0.960 | grad 1.90e-01 | 7.7s
+  ep 17  loss 0.0626  acc 0.952 | val loss 0.2431  auc 0.9931  acc 0.754 | grad 1.91e-01 | 7.3s
+  ep 18  loss 0.0627  acc 0.951 | val loss 0.0618  auc 0.9920  acc 0.943 | grad 2.00e-01 | 7.2s
+  ep 19  loss 0.0595  acc 0.953 | val loss 0.0664  auc 0.9944  acc 0.933 | grad 2.42e-01 | 7.7s
+  ep 20  loss 0.0599  acc 0.954 | val loss 0.1542  auc 0.9947  acc 0.836 | grad 2.24e-01 | 7.3s
+  ep 21  loss 0.0548  acc 0.959 | val loss 0.0951  auc 0.9951  acc 0.893 | grad 1.94e-01 | 7.3s
+  ep 22  loss 0.0544  acc 0.957 | val loss 0.0922  auc 0.9943  acc 0.966 | grad 1.92e-01 | 7.5s
+  ep 23  loss 0.0541  acc 0.961 | val loss 0.0921  auc 0.9944  acc 0.893 | grad 1.95e-01 | 7.4s
+  ep 24  loss 0.0524  acc 0.958 | val loss 0.0559  auc 0.9948  acc 0.943 | grad 1.94e-01 | 8.1s
+  ep 25  loss 0.0530  acc 0.960 | val loss 0.1212  auc 0.9953  acc 0.861 | grad 1.98e-01 | 7.4s  *
+  ep 26  loss 0.0484  acc 0.961 | val loss 0.0760  auc 0.9953  acc 0.912 | grad 1.74e-01 | 7.4s  *
+  ep 27  loss 0.0530  acc 0.958 | val loss 0.0692  auc 0.9951  acc 0.926 | grad 2.01e-01 | 7.5s
+  ep 28  loss 0.0541  acc 0.961 | val loss 0.0648  auc 0.9951  acc 0.929 | grad 2.16e-01 | 9.2s
+  ep 29  loss 0.0509  acc 0.961 | val loss 0.0663  auc 0.9952  acc 0.929 | grad 1.89e-01 | 9.9s
+  ep 30  loss 0.0455  acc 0.963 | val loss 0.0683  auc 0.9951  acc 0.929 | grad 1.80e-01 | 8.8s
+done: best epoch 26, val AUC 0.9953, val ACC 0.912, 4.0 min

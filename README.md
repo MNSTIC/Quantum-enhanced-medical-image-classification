@@ -5,12 +5,18 @@ locally with [PennyLane](https://pennylane.ai) and PyTorch, and compared honestl
 control of identical size.
 
 ```
-28x28 X-ray -> small CNN -> 8 features -> 8-qubit variational circuit (72 angles) -> linear -> P(pneumonia)
+28x28 X-ray -> small CNN -> 8 features -> 8-qubit variational circuit -> linear -> P(pneumonia)
                                        \-> classical control: Linear(8, 8) + tanh (72 weights)
 ```
 
 The two models share everything except that 8 -> 8 middle block, so any difference in their results is
-caused by the quantum circuit. Everything runs on a laptop CPU; no quantum hardware or cloud is used.
+caused by the quantum circuit. A validation-only sweep chose a 1-layer circuit (24 angles); the default
+3-layer circuit (72 angles, exactly the control's size) is reported as a secondary, parameter-matched
+comparison. Everything runs on a laptop CPU; no quantum hardware or cloud is used.
+
+**Answer in one line:** the hybrid clears the published ResNet-18 baseline comfortably, but so does the
+classical control; the quantum layer matched it within noise and never beat it (details in
+[REPORT.md](REPORT.md), Section 6).
 
 **Study project only. It must not be used for diagnosis.**
 
@@ -24,13 +30,13 @@ caused by the quantum circuit. Everything runs on a laptop CPU; no quantum hardw
 ## Results (test set, 624 images, 5 seeds)
 
 <!-- results:main -->
-| Model | Params: total / middle block (effective) | Seeds | Test AUC | Test ACC | Sensitivity | Specificity | Balanced acc. | Ensemble AUC [95% CI] | Ensemble ACC [95% CI] |
+| Model | Params: total / compared block (effective) | Seeds | Test AUC | Test ACC | Sensitivity | Specificity | Balanced acc. | Ensemble AUC [95% CI] | Ensemble ACC [95% CI] |
 |---|---|---|---|---|---|---|---|---|---|
 | Hybrid 8q x 1L | 60,953 / 24 (16) | 5 | 0.975 ± 0.004 | 0.916 ± 0.028 | 0.971 ± 0.016 | 0.823 ± 0.095 | 0.897 ± 0.041 | 0.979 [0.967, 0.989] | 0.925 [0.904, 0.946] |
 | Classical control (8 units) | 61,001 / 72 (72) | 5 | 0.978 ± 0.003 | 0.931 ± 0.016 | 0.966 ± 0.016 | 0.872 ± 0.058 | 0.919 ± 0.024 | 0.981 [0.971, 0.989] | 0.941 [0.921, 0.958] |
 | Hybrid 8q x 1L, no entanglement | 60,953 / 24 (16) | 5 | 0.977 ± 0.003 | 0.927 ± 0.010 | 0.975 ± 0.010 | 0.848 ± 0.041 | 0.911 ± 0.016 | 0.981 [0.970, 0.990] | 0.931 [0.909, 0.950] |
 
-Mean ± sample standard deviation over seeds; ACC, sensitivity and specificity at threshold 0.5. Ensemble = average of the seeds' probabilities; CI = 2,000 bootstrap resamples of the 624 test images. 'Effective' excludes the last-layer RZ angles that provably cannot affect the circuit output.
+Mean ± sample standard deviation over seeds; ACC, sensitivity and specificity at threshold 0.5. Ensemble = average of the seeds' probabilities; CI = 2,000 bootstrap resamples of the 624 test images. Compared block = the 8 -> 8 middle block, or the 2x2 front end for the quanvolution models. 'Effective' excludes the last-layer RZ angles that provably cannot affect the circuit output.
 <!-- /results:main -->
 
 <!-- results:target -->
@@ -76,13 +82,18 @@ All commands run from the project folder. The dataset (about 4 MB) downloads int
 .venv\Scripts\python.exe src\predict.py --input path\to\xray.png
 ```
 
-- `train.py` trains one model for one seed into `runs/<name>/seed<k>/` (`--mode classical` for the control;
-  every hyperparameter is a flag, see `src/config.py`). It never touches the test set.
-- `evaluate.py` is the only script that reads the test set. It scores every finished final model, writes
-  `runs/summary.csv` and `runs/results.md`, refreshes the tables in this README and REPORT.md, and draws the
-  figures. `--noise` adds the finite-shot and noisy-circuit evaluation.
+- `train.py` trains one model for one seed into `runs/<name>/seed<k>/`. The defaults are the brief's 8-qubit,
+  3-layer hybrid; add `--n_layers 1` for the final 1-layer hybrid, or use `--mode classical` for the control.
+  Every hyperparameter is a flag (see `src/config.py`). It never touches the test set. The run folders in
+  this repository already hold finished results, so a run whose `metrics.json` exists is skipped; add
+  `--force` to retrain it.
+- `evaluate.py` is the only script that reads the test set. It scores every finished final model (reusing
+  cached test predictions; model weights are not stored in git), writes `runs/summary.csv` and
+  `runs/results.md`, refreshes the tables in README.md, REPORT.md and EXPLAINED.md, and draws the figures.
+  `--noise` reruns the slow finite-shot and noisy-circuit evaluation.
 - `predict.py` accepts a PNG/JPG or a `.npy` array and prints P(pneumonia) and the label. By default it
-  averages all seeds of the final hybrid; `--run runs/hybrid_q8_l3/seed0` uses one checkpoint.
+  averages all trained seeds of the final hybrid (`runs/hybrid_q8_l1`); `--run runs/hybrid_q8_l1/seed0` uses
+  one checkpoint. It needs trained weights (`best.pt`) on this machine.
 
 To reproduce everything (sweep, final runs, extensions; several hours on a laptop CPU):
 
@@ -91,15 +102,17 @@ To reproduce everything (sweep, final runs, extensions; several hours on a lapto
 ```
 
 ```bash
-.venv\Scripts\python.exe src\sweep.py --stage final
+.venv\Scripts\python.exe src\sweep.py --stage final matched quanv s64
 ```
 
 ```bash
 .venv\Scripts\python.exe src\evaluate.py --noise
 ```
 
-`sweep.py` also has `--stage quanv` and `--stage s64` for the extensions, `--workers N` sets how many runs share
-the CPU, and an interrupted sweep resumes where it stopped.
+Stages: `final` = final hybrid, classical control and no-entanglement ablation; `matched` = the 72-parameter
+3-layer hybrid; `quanv` and `s64` = the extensions. `--workers N` sets how many runs share the CPU (default 8),
+finished runs are skipped, and an interrupted sweep resumes where it stopped. To start from scratch, delete
+`runs/` first.
 
 ## Hardware and timing
 
@@ -114,7 +127,10 @@ not used: below about 15 qubits a GPU simulates slower than the CPU). The table 
 | Classical control (8 units) | 5 | 11.7 | 5.8 | 3.6 |
 | Hybrid 8q x 1L, no entanglement | 5 | 17.1 | 8.5 | 8.2 |
 | Hybrid 8q x 3L | 5 | 24.6 | 12.3 | 6.6 |
-| Conv 2x2 control | 3 | 7.9 | 3.9 | 3.8 |
+| Quanvolution front end | 5 | 57.0 | 28.5 | 25.0 |
+| Conv 2x2 control | 5 | 9.2 | 4.6 | 3.8 |
+| Hybrid 8q x 1L, 64x64 | 5 | 105.5 | 52.7 | 43.4 |
+| Classical control (8 units), 64x64 | 5 | 78.3 | 39.2 | 28.6 |
 
 CPU only, 2 PyTorch threads per run; up to 8 runs shared the 20-core CPU at once, so single-run times on an idle machine are shorter.
 <!-- /results:timing -->

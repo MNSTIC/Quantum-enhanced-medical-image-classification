@@ -15,14 +15,31 @@
 
 Validation split only (524 images); mean ± sample std over seeds 0-2. Checkpoint = epoch with the best validation AUC. Epoch times measured with up to 8 runs sharing the CPU.
 
+## gradients
+
+| Run group | Runs | Smallest epoch mean | Largest epoch mean | Last epoch (mean over runs) |
+|---|---|---|---|---|
+| hybrid_q4_l1 | 3 | 4.1e-03 | 3.5e-02 | 2.4e-02 |
+| hybrid_q4_l3 | 3 | 1.5e-02 | 6.4e-02 | 3.1e-02 |
+| hybrid_q4_l5 | 3 | 1.8e-02 | 5.5e-02 | 4.1e-02 |
+| hybrid_q8_l1 | 5 | 1.1e-02 | 6.5e-02 | 3.5e-02 |
+| hybrid_q8_l1_noent | 5 | 1.1e-02 | 2.7e-02 | 1.6e-02 |
+| hybrid_q8_l1_s64 | 5 | 1.2e-02 | 7.2e-02 | 4.3e-02 |
+| hybrid_q8_l3 | 5 | 5.6e-03 | 6.1e-02 | 3.0e-02 |
+| hybrid_q8_l3_noent | 3 | 1.7e-02 | 3.5e-02 | 2.2e-02 |
+| hybrid_q8_l3_noreup | 3 | 1.6e-02 | 3.6e-02 | 2.3e-02 |
+| hybrid_q8_l5 | 3 | 1.0e-02 | 4.5e-02 | 2.2e-02 |
+
+L2 norm of the circuit-angle gradients, averaged over the steps of each epoch (before clipping). A barren plateau would show as values collapsing towards zero.
+
 ## matched
 
-| Model | Params: total / middle block (effective) | Seeds | Test AUC | Test ACC | Sensitivity | Specificity | Balanced acc. | Ensemble AUC [95% CI] | Ensemble ACC [95% CI] |
+| Model | Params: total / compared block (effective) | Seeds | Test AUC | Test ACC | Sensitivity | Specificity | Balanced acc. | Ensemble AUC [95% CI] | Ensemble ACC [95% CI] |
 |---|---|---|---|---|---|---|---|---|---|
 | Hybrid 8q x 3L | 61,001 / 72 (64) | 5 | 0.975 ± 0.004 | 0.916 ± 0.023 | 0.984 ± 0.010 | 0.803 ± 0.076 | 0.894 ± 0.033 | 0.980 [0.969, 0.990] | 0.920 [0.897, 0.941] |
 | Classical control (8 units) | 61,001 / 72 (72) | 5 | 0.978 ± 0.003 | 0.931 ± 0.016 | 0.966 ± 0.016 | 0.872 ± 0.058 | 0.919 ± 0.024 | 0.981 [0.971, 0.989] | 0.941 [0.921, 0.958] |
 
-Mean ± sample standard deviation over seeds; ACC, sensitivity and specificity at threshold 0.5. Ensemble = average of the seeds' probabilities; CI = 2,000 bootstrap resamples of the 624 test images. 'Effective' excludes the last-layer RZ angles that provably cannot affect the circuit output.
+Mean ± sample standard deviation over seeds; ACC, sensitivity and specificity at threshold 0.5. Ensemble = average of the seeds' probabilities; CI = 2,000 bootstrap resamples of the 624 test images. Compared block = the 8 -> 8 middle block, or the 2x2 front end for the quanvolution models. 'Effective' excludes the last-layer RZ angles that provably cannot affect the circuit output.
 
 **A = Hybrid 8q x 3L, B = Classical control (8 units)**
 
@@ -39,19 +56,22 @@ Mean ± sample standard deviation over seeds; ACC, sensitivity and specificity a
 | Classical control (8 units) | 5 | 11.7 | 5.8 | 3.6 |
 | Hybrid 8q x 1L, no entanglement | 5 | 17.1 | 8.5 | 8.2 |
 | Hybrid 8q x 3L | 5 | 24.6 | 12.3 | 6.6 |
-| Conv 2x2 control | 3 | 7.9 | 3.9 | 3.8 |
+| Quanvolution front end | 5 | 57.0 | 28.5 | 25.0 |
+| Conv 2x2 control | 5 | 9.2 | 4.6 | 3.8 |
+| Hybrid 8q x 1L, 64x64 | 5 | 105.5 | 52.7 | 43.4 |
+| Classical control (8 units), 64x64 | 5 | 78.3 | 39.2 | 28.6 |
 
 CPU only, 2 PyTorch threads per run; up to 8 runs shared the 20-core CPU at once, so single-run times on an idle machine are shorter.
 
 ## main
 
-| Model | Params: total / middle block (effective) | Seeds | Test AUC | Test ACC | Sensitivity | Specificity | Balanced acc. | Ensemble AUC [95% CI] | Ensemble ACC [95% CI] |
+| Model | Params: total / compared block (effective) | Seeds | Test AUC | Test ACC | Sensitivity | Specificity | Balanced acc. | Ensemble AUC [95% CI] | Ensemble ACC [95% CI] |
 |---|---|---|---|---|---|---|---|---|---|
 | Hybrid 8q x 1L | 60,953 / 24 (16) | 5 | 0.975 ± 0.004 | 0.916 ± 0.028 | 0.971 ± 0.016 | 0.823 ± 0.095 | 0.897 ± 0.041 | 0.979 [0.967, 0.989] | 0.925 [0.904, 0.946] |
 | Classical control (8 units) | 61,001 / 72 (72) | 5 | 0.978 ± 0.003 | 0.931 ± 0.016 | 0.966 ± 0.016 | 0.872 ± 0.058 | 0.919 ± 0.024 | 0.981 [0.971, 0.989] | 0.941 [0.921, 0.958] |
 | Hybrid 8q x 1L, no entanglement | 60,953 / 24 (16) | 5 | 0.977 ± 0.003 | 0.927 ± 0.010 | 0.975 ± 0.010 | 0.848 ± 0.041 | 0.911 ± 0.016 | 0.981 [0.970, 0.990] | 0.931 [0.909, 0.950] |
 
-Mean ± sample standard deviation over seeds; ACC, sensitivity and specificity at threshold 0.5. Ensemble = average of the seeds' probabilities; CI = 2,000 bootstrap resamples of the 624 test images. 'Effective' excludes the last-layer RZ angles that provably cannot affect the circuit output.
+Mean ± sample standard deviation over seeds; ACC, sensitivity and specificity at threshold 0.5. Ensemble = average of the seeds' probabilities; CI = 2,000 bootstrap resamples of the 624 test images. Compared block = the 8 -> 8 middle block, or the 2x2 front end for the quanvolution models. 'Effective' excludes the last-layer RZ angles that provably cannot affect the circuit output.
 
 ## seeds
 
@@ -107,8 +127,56 @@ Target (beat ResNet-18 at 28x28, AUC 0.944 / ACC 0.854): Hybrid 8q x 1L mean tes
 
 ## quanv
 
-| Model | Params: total / middle block (effective) | Seeds | Test AUC | Test ACC | Sensitivity | Specificity | Balanced acc. | Ensemble AUC [95% CI] | Ensemble ACC [95% CI] |
+| Model | Params: total / compared block (effective) | Seeds | Test AUC | Test ACC | Sensitivity | Specificity | Balanced acc. | Ensemble AUC [95% CI] | Ensemble ACC [95% CI] |
 |---|---|---|---|---|---|---|---|---|---|
-| Conv 2x2 control | 56,853 / 20 (20) | 3 | 0.978 ± 0.000 | 0.932 ± 0.008 | 0.946 ± 0.003 | 0.909 ± 0.021 | 0.927 ± 0.010 | 0.980 [0.970, 0.988] | 0.941 [0.921, 0.958] |
+| Quanvolution front end | 56,857 / 24 (20) | 5 | 0.973 ± 0.001 | 0.916 ± 0.017 | 0.929 ± 0.040 | 0.895 ± 0.079 | 0.912 ± 0.026 | 0.976 [0.964, 0.985] | 0.934 [0.915, 0.954] |
+| Conv 2x2 control | 56,853 / 20 (20) | 5 | 0.977 ± 0.002 | 0.927 ± 0.009 | 0.934 ± 0.016 | 0.915 ± 0.020 | 0.925 ± 0.009 | 0.979 [0.969, 0.988] | 0.933 [0.913, 0.952] |
 
-Mean ± sample standard deviation over seeds; ACC, sensitivity and specificity at threshold 0.5. Ensemble = average of the seeds' probabilities; CI = 2,000 bootstrap resamples of the 624 test images. 'Effective' excludes the last-layer RZ angles that provably cannot affect the circuit output.
+Mean ± sample standard deviation over seeds; ACC, sensitivity and specificity at threshold 0.5. Ensemble = average of the seeds' probabilities; CI = 2,000 bootstrap resamples of the 624 test images. Compared block = the 8 -> 8 middle block, or the 2x2 front end for the quanvolution models. 'Effective' excludes the last-layer RZ angles that provably cannot affect the circuit output.
+
+**A = Quanvolution front end, B = Conv 2x2 control**
+
+| Metric | Mean A − B | Larger seed std | Ensemble 95% CI, A vs B | CIs overlap | Seeds where A > B | Verdict |
+|---|---|---|---|---|---|---|
+| AUC | -0.0036 | 0.0023 | [0.964, 0.985] vs [0.969, 0.988] | yes | 1 of 5 | **no significant difference** |
+| ACC | -0.0109 | 0.0174 | [0.915, 0.954] vs [0.913, 0.952] | yes | 1 of 5 | **no significant difference** |
+
+## s64
+
+| Model | Params: total / compared block (effective) | Seeds | Test AUC | Test ACC | Sensitivity | Specificity | Balanced acc. | Ensemble AUC [95% CI] | Ensemble ACC [95% CI] |
+|---|---|---|---|---|---|---|---|---|---|
+| Hybrid 8q x 1L, 64x64 | 60,953 / 24 (16) | 5 | 0.966 ± 0.007 | 0.911 ± 0.022 | 0.964 ± 0.017 | 0.823 ± 0.077 | 0.894 ± 0.032 | 0.974 [0.962, 0.985] | 0.925 [0.904, 0.944] |
+| Classical control (8 units), 64x64 | 61,001 / 72 (72) | 5 | 0.973 ± 0.002 | 0.926 ± 0.008 | 0.936 ± 0.013 | 0.908 ± 0.012 | 0.922 ± 0.007 | 0.975 [0.962, 0.985] | 0.933 [0.913, 0.950] |
+
+Mean ± sample standard deviation over seeds; ACC, sensitivity and specificity at threshold 0.5. Ensemble = average of the seeds' probabilities; CI = 2,000 bootstrap resamples of the 624 test images. Compared block = the 8 -> 8 middle block, or the 2x2 front end for the quanvolution models. 'Effective' excludes the last-layer RZ angles that provably cannot affect the circuit output.
+
+**A = Hybrid 8q x 1L, 64x64, B = Classical control (8 units), 64x64**
+
+| Metric | Mean A − B | Larger seed std | Ensemble 95% CI, A vs B | CIs overlap | Seeds where A > B | Verdict |
+|---|---|---|---|---|---|---|
+| AUC | -0.0071 | 0.0072 | [0.962, 0.985] vs [0.962, 0.985] | yes | 0 of 5 | **no significant difference** |
+| ACC | -0.0144 | 0.0216 | [0.904, 0.944] vs [0.913, 0.950] | yes | 1 of 5 | **no significant difference** |
+
+## noise
+
+| Circuit simulation | Test AUC | Test ACC | Δ AUC vs exact |
+|---|---|---|---|
+| exact simulation | 0.9748 ± 0.0036 | 0.916 ± 0.028 | +0.0000 |
+| shots=1000 | 0.9746 ± 0.0037 | 0.914 ± 0.031 | -0.0002 |
+| p=0.001 | 0.9748 ± 0.0036 | 0.916 ± 0.028 | +0.0000 |
+| p=0.01 | 0.9748 ± 0.0036 | 0.916 ± 0.028 | +0.0000 |
+| p=0.05 | 0.9748 ± 0.0036 | 0.915 ± 0.029 | +0.0000 |
+
+Same trained weights, no retraining; mean ± std over 5 seeds. 'shots=1000': each <Z> estimated from 1,000 measurements. 'p=…': default.mixed simulator with a depolarising channel of probability p on every qubit after every layer.
+
+## noise_matched
+
+| Circuit simulation | Test AUC | Test ACC | Δ AUC vs exact |
+|---|---|---|---|
+| exact simulation | 0.9753 ± 0.0040 | 0.916 ± 0.023 | +0.0000 |
+| shots=1000 | 0.9755 ± 0.0039 | 0.918 ± 0.023 | +0.0003 |
+| p=0.001 | 0.9753 ± 0.0040 | 0.917 ± 0.022 | +0.0000 |
+| p=0.01 | 0.9754 ± 0.0039 | 0.916 ± 0.022 | +0.0001 |
+| p=0.05 | 0.9757 ± 0.0037 | 0.913 ± 0.028 | +0.0004 |
+
+Same trained weights, no retraining; mean ± std over 5 seeds. 'shots=1000': each <Z> estimated from 1,000 measurements. 'p=…': default.mixed simulator with a depolarising channel of probability p on every qubit after every layer.

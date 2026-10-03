@@ -130,7 +130,7 @@ def sweep_bars(table: pd.DataFrame, path: Path) -> None:
     _save(fig, path)
 
 
-def noise_curves(df: pd.DataFrame, path: Path) -> None:
+def noise_curves(df: pd.DataFrame, path: Path, model: str) -> None:
     """Test AUC and ACC of the trained hybrid vs depolarising probability p (mean +- std over seeds).
 
     `df` rows: setting ('exact', 'shots=1000', 'p=0.001', ...), p, metric means and stds.
@@ -145,6 +145,9 @@ def noise_curves(df: pd.DataFrame, path: Path) -> None:
         ax.set_xscale("log")
         ax.set_xlabel("depolarising probability p per qubit per layer")
         ax.set_title(f"Test {metric.upper()}")
-    axes[0].legend(fontsize=8)
-    fig.suptitle("Trained hybrid evaluated under finite shots and noise (no retraining), mean of seeds", fontsize=10)
-    _save(fig, path)
+    fig.suptitle(f"{model}: trained model evaluated under finite shots and noise (no retraining), mean of seeds",
+                 fontsize=10)
+    fig.tight_layout(rect=(0, 0.1, 1, 1))   # leave room for the legend below the panels
+    fig.legend(*axes[0].get_legend_handles_labels(), loc="lower center", ncol=3, fontsize=9)
+    fig.savefig(path, dpi=150)
+    plt.close(fig)

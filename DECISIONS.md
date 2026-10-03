@@ -86,3 +86,46 @@ Every judgement call made while building this project, with the reason. Newest p
   the final hybrid because the brief's design makes entanglement the default and runs its removal as the
   ablation; the observation is reported in REPORT.md and tested again by the Phase 4 ablation.
 - **The classical backbone was not swept**, as the brief requires: changing it would change what is compared.
+
+## Phase 4: final runs and the test evaluation
+
+- **The test set was scored once**, by one `python src/evaluate.py` call made after commit `3337c49` froze the
+  configuration. Later calls reuse the cached `test_predictions.csv` and only rebuild tables and figures (for
+  example after fixing overlapping labels in the bar chart). The Phase 5 extension groups were still training
+  at that moment; their checkpoints are scored when they finish, in the same cached way, and nothing about
+  the main configuration was revisited after seeing test numbers.
+- **The verdict text follows the pre-fixed rule** ("no significant difference") even though the classical control
+  is ahead on AUC for every paired seed. Both facts are reported; the rule was not changed after the fact.
+- **The circuit figure shows the final 1-layer circuit** (`figures/circuit.png`); the default 3-layer circuit is
+  drawn as well (`figures/circuit_8x3.png`) because it is the one that shows data re-uploading.
+- **The 1-layer circuit's closed form is tested, not just claimed.** REPORT.md explains the ablation result with
+  an exact formula for the 1-layer circuit (per-qubit shifted cosines; the CNOT ring turns them into running
+  products). `test_one_layer_circuit_has_closed_form` checks the formula against the simulator with large
+  random angles, with and without entanglement.
+- **A generated gradient table backs the barren-plateau statement** in REPORT.md, so that statement does not rest
+  on hand-copied numbers.
+
+## Phase 5: extensions
+
+- **Noise and shots are evaluated on all 5 seeds of the final hybrid**, by copying the trained angles into a
+  QNode with `diff_method=None` (finite shots on `default.qubit`, seeded per run; depolarising noise on
+  `default.mixed`). Only the circuit changes; the CNN and heads are the trained ones. A check on random inputs
+  confirmed that `default.mixed` with p = 0 reproduces the exact simulator. `default.mixed` is slow (it tracks a
+  256 x 256 density matrix per image), so the noise curve covers only the brief's three p values.
+- **Noise is also evaluated on the 3-layer parameter-matched hybrid.** On the final 1-layer circuit the test AUC
+  came out *exactly* unchanged for every p. That is not a bug: with one layer, the only noise sits just before
+  the measurement, and a depolarising channel there shrinks every `<Z>` by the same factor (1 - 4p/3). The
+  linear head turns that into a monotone rescaling of the logit, which cannot change a ranking, so AUC is
+  invariant by construction and only ACC (through the fixed 0.5 threshold) can move. To see noise acting
+  *between* layers, where it interacts with re-uploading and entanglement, the same evaluation was run on the
+  5 seeds of the 3-layer circuit (`noise_matched`). This is an evaluation of an already-declared group, not a
+  selection step.
+- **Quanvolution model design.** The brief fixes the front end (4-qubit circuit on every 2 x 2 patch, angles =
+  pixel value x pi/2) and its control (`Conv2d(1, 4, 2, stride=2)` + tanh), but not the rest. To make the front
+  end the only difference, both use the same reduced CNN (three conv blocks on the 4 x 14 x 14 maps, one
+  max-pool, global average pooling) and a plain `Linear(64, 1)` head, with no 8 -> 8 middle block. The filter
+  uses 2 layers: 24 angles, of which 20 are effective (the same last-layer RZ argument), against the control
+  conv's 16 weights + 4 biases = 20. This matching was not tuned; it falls out of the 2-layer choice.
+- **64 x 64 runs use the final hybrid and its control unchanged** (the backbone ends in global average pooling,
+  so it accepts any size), with 5 seeds. They are labelled 64 x 64 everywhere and are not compared with the
+  28 x 28 baselines.

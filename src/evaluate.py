@@ -2,7 +2,8 @@
 
     python src/evaluate.py              # test scores of the final models (+ extensions, if trained)
     python src/evaluate.py --val-only   # Phase 3 sweep table from validation metrics; never opens test
-    python src/evaluate.py --noise      # also Phase 5.1: finite shots and depolarising noise
+    python src/evaluate.py --noise      # also Phase 5.1: finite shots and depolarising noise (slow;
+                                        # saved, and reused by later calls without --noise)
 
 This is the ONLY script that loads the test split. Each checkpoint is scored once: its test
 probabilities are cached in test_predictions.csv and reused by later calls, so rerunning this
@@ -25,7 +26,7 @@ import torch
 from medmnist import Evaluator
 
 import figures
-from config import DATA_DIR, FIG_DIR, FINAL_HYBRID, ROOT, RUNS_DIR, Config, config_from_dict
+from config import DATA_DIR, FIG_DIR, FINAL_HYBRID, MATCHED_HYBRID, ROOT, RUNS_DIR, Config, config_from_dict
 from data import make_test_loader
 from engine import bootstrap_ci, compute_metrics, predict
 from models import build_model
@@ -105,8 +106,10 @@ def load_model(run_dir: Path) -> tuple[Config, torch.nn.Module]:
 
 def test_probs(run_dir: Path, size: int, y: np.ndarray) -> np.ndarray:
     """P(pneumonia) for the 624 test images, in dataset order; computed once per checkpoint."""
-    f = run_dir / "test_predictions.csv"
-    if f.exists() and f.stat().st_mtime > (run_dir / "best.pt").stat().st_mtime:
+    f, ckpt = run_dir / "test_predictions.csv", run_dir / "best.pt"
+    # Reuse the cache unless the checkpoint was retrained after it. Checkpoints are not in git, so a fresh
+    # clone rebuilds every table from the committed predictions.
+    if f.exists() and (not ckpt.exists() or f.stat().st_mtime > ckpt.stat().st_mtime):
         df = pd.read_csv(f)
     else:
         _, model = load_model(run_dir)
@@ -153,7 +156,7 @@ def score_group(cfg: Config) -> dict | None:
 
 # ----------------------------------------------------------------------------------------- tables
 def main_table(res: list[dict]) -> str:
-    out = ["| Model | Params: total / middle block (effective) | Seeds | Test AUC | Test ACC | Sensitivity | "
+    out = ["| Model | Params: total / compared block (effective) | Seeds | Test AUC | Test ACC | Sensitivity | "
            "Specificity | Balanced acc. | Ensemble AUC [95% CI] | Ensemble ACC [95% CI] |",
            "|---|---|---|---|---|---|---|---|---|---|"]
     for r in res:
@@ -164,6 +167,7 @@ def main_table(res: list[dict]) -> str:
                    f"{e['auc']:.3f} {ci(e['auc_ci'])} | {e['acc']:.3f} {ci(e['acc_ci'])} |")
     out.append("\nMean ± sample standard deviation over seeds; ACC, sensitivity and specificity at threshold 0.5. "
                "Ensemble = average of the seeds' probabilities; CI = 2,000 bootstrap resamples of the 624 test images. "
+               "Compared block = the 8 -> 8 middle block, or the 2x2 front end for the quanvolution models. "
                "'Effective' excludes the last-layer RZ angles that provably cannot affect the circuit output.")
     return "\n".join(out)
 
@@ -239,6 +243,20 @@ def summary_rows(r: dict) -> list[dict]:
                  "auc_ci_lo": e["auc_ci"][0], "auc_ci_hi": e["auc_ci"][1],
                  "acc_ci_lo": e["acc_ci"][0], "acc_ci_hi": e["acc_ci"][1]})
     return rows
+
+
+def gradient_table() -> str:
+    """Barren-plateau check: gradient norm of the circuit angles over training, for every hybrid run."""
+    rows = ["| Run group | Runs | Smallest epoch mean | Largest epoch mean | Last epoch (mean over runs) |",
+            "|---|---|---|---|---|"]
+    for gdir in sorted(RUNS_DIR.glob("hybrid_*")):
+        hs = [pd.read_csv(f)["probe_grad_norm"] for f in sorted(gdir.glob("seed*/history.csv"))]
+        if hs:
+            rows.append(f"| {gdir.name} | {len(hs)} | {min(h.min() for h in hs):.1e} | {max(h.max() for h in hs):.1e} | "
+                        f"{np.mean([h.iloc[-1] for h in hs]):.1e} |")
+    rows.append("\nL2 norm of the circuit-angle gradients, averaged over the steps of each epoch (before clipping). "
+                "A barren plateau would show as values collapsing towards zero.")
+    return "\n".join(rows)
 
 
 # --------------------------------------------------------------------------- validation-only sweep
@@ -334,13 +352,15 @@ def main() -> None:
     FIG_DIR.mkdir(exist_ok=True)
     sections: dict[str, str] = {}
 
-    (FIG_DIR / "circuit.txt").write_text(
-        draw_circuit(FINAL_HYBRID.n_qubits, FINAL_HYBRID.n_layers, FIG_DIR / "circuit.png"), encoding="utf-8")
+    for cfg, stem in ((FINAL_HYBRID, "circuit"), (MATCHED_HYBRID, "circuit_8x3")):
+        (FIG_DIR / f"{stem}.txt").write_text(draw_circuit(cfg.n_qubits, cfg.n_layers, FIG_DIR / f"{stem}.png"),
+                                             encoding="utf-8")
     sweep = sweep_table()
     if sweep is not None:
         sweep.to_csv(RUNS_DIR / "sweep_summary.csv", index=False)
         figures.sweep_bars(sweep, FIG_DIR / "sweep_val_auc.png")
         sections["sweep"] = sweep_markdown(sweep)
+    sections["gradients"] = gradient_table()   # training histories only; no test data
 
     if not args.val_only:
         print("scoring on the test set:")
@@ -369,12 +389,16 @@ def main() -> None:
         for key, res in ext.items():
             if res:
                 sections[key] = main_table(res) + ("\n\n" + compare(res[0], res[1]) if len(res) == 2 else "")
-        if args.noise:
-            noise = noise_eval(FINAL_HYBRID)
+        # The 1-layer final circuit has noise only before its measurement, which rescales every <Z> by the
+        # same factor; the 3-layer circuit also has noise between layers, the more informative case.
+        # Without --noise, the summaries saved by an earlier --noise run are reused (the simulation is slow).
+        for cfg, key in ((FINAL_HYBRID, "noise"), (MATCHED_HYBRID, "noise_matched")):
+            saved = RUNS_DIR / f"{key}_summary.csv"
+            noise = noise_eval(cfg) if args.noise else pd.read_csv(saved) if saved.exists() else None
             if noise is not None:
-                noise.to_csv(RUNS_DIR / "noise_summary.csv", index=False)
-                figures.noise_curves(noise, FIG_DIR / "noise.png")
-                sections["noise"] = noise_markdown(noise, len(seed_dirs(FINAL_HYBRID)))
+                noise.to_csv(saved, index=False)
+                figures.noise_curves(noise, FIG_DIR / f"{key}.png", label(cfg))
+                sections[key] = noise_markdown(noise, len(seed_dirs(cfg)))
 
     md = "\n\n".join(f"## {k}\n\n{v}" for k, v in sections.items())
     if not args.val_only or not (RUNS_DIR / "results.md").exists():

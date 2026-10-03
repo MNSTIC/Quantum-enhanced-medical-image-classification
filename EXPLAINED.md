@@ -50,9 +50,9 @@ flowchart LR
     B --> C["64 features"]
     C --> D["dropout + Linear(64, 8)<br/>then pi * tanh"]
     D --> E["8 angles in (-pi, pi)"]
-    E --> F{"middle block<br/>72 weights"}
-    F -->|hybrid| G["8-qubit circuit<br/>3 layers"]
-    F -->|classical control| H["Linear(8, 8) + tanh"]
+    E --> F{"middle block"}
+    F -->|hybrid| G["8-qubit circuit<br/>1 layer (final): 24 angles<br/>3 layers (default): 72 angles"]
+    F -->|classical control| H["Linear(8, 8) + tanh<br/>72 weights"]
     G --> I["8 values in [-1, 1]"]
     H --> I
     I --> J["Linear(8, 1)"]
@@ -67,7 +67,9 @@ single number, so any image becomes 64 features.
 A linear layer then squeezes those 64 features into 8, and `pi * tanh` maps each into the range (-pi, pi)
 so it can serve as a rotation angle. The **middle block** turns 8 numbers into 8 numbers. In the hybrid
 model it is a quantum circuit; in the classical control it is an ordinary `Linear(8, 8)` layer with `tanh`.
-Both have 72 trainable numbers and everything else is identical, which is what makes the comparison fair.
+Everything else is identical, which is what makes the comparison fair. The default 3-layer circuit has 72
+trainable numbers, exactly like the control; the sweep (Section 10) found that 1 layer (24 numbers) works
+just as well, so the final hybrid uses 1 layer and the 3-layer version is kept as a size-matched check.
 A final linear layer turns the 8 outputs into one score (the logit), and the sigmoid function turns that
 into a probability.
 
@@ -101,7 +103,7 @@ numbers. This is why simulating a few qubits is cheap, and why each extra qubit 
 
 ## 5. The circuit, step by step
 
-![Circuit](figures/circuit.png)
+![Default 3-layer circuit](figures/circuit_8x3.png)
 
 Read the drawing left to right; each horizontal line is one qubit. One layer is:
 
@@ -111,10 +113,21 @@ Read the drawing left to right; each horizontal line is one qubit. One layer is:
    trainable angles: 8 qubits x 3 angles = 24 per layer.
 3. **Entangle (the CNOT ring).** CNOTs from qubit 0 to 1, 1 to 2, ..., 7 back to 0.
 
-The layer repeats 3 times, so 3 x 24 = 72 trainable angles. Repeating the encoding before every layer is
-called **data re-uploading**: each input then enters the circuit several times, which lets the circuit
-form more complicated functions of the inputs (in the same way that a polynomial of higher degree can fit
-more shapes). At the end, `<Z>` of each qubit is read out, giving 8 numbers in [-1, 1].
+In the default circuit the layer repeats 3 times, so 3 x 24 = 72 trainable angles. Repeating the encoding
+before every layer is called **data re-uploading**: each input then enters the circuit several times, which
+lets the circuit form more complicated functions of the inputs (in the same way that a polynomial of higher
+degree can fit more shapes). At the end, `<Z>` of each qubit is read out, giving 8 numbers in [-1, 1].
+
+The **final model uses a single layer**, drawn here:
+
+![Final 1-layer circuit](figures/circuit.png)
+
+With one layer the circuit is simple enough to write down exactly, which is a good way to see what it does.
+On its own, qubit i ends up with `<Z> = cos(theta_i) cos(x_i) - sin(theta_i) cos(phi_i) sin(x_i)`, which is
+just a shifted cosine of its input, `r cos(x_i + delta)`: a wavy "activation function" with two learned
+numbers. The CNOT ring then multiplies these together: output k becomes the product of the first k+1
+cosines. So the final hybrid's middle block is "8 learned cosine curves, then running products". A test
+(`test_one_layer_circuit_has_closed_form`) checks this formula against the simulator.
 
 In code (`src/quantum.py`), PennyLane's `qml.AngleEmbedding` does step 1 and
 `qml.StronglyEntanglingLayers` does steps 2 and 3. `qml.qnn.TorchLayer` wraps the circuit so that PyTorch
@@ -126,9 +139,9 @@ instead of feature i and silently break the model. One of the tests checks for e
 
 **One detail worth knowing.** The last trainable gate on every qubit is the final `RZ(omega)` of the last
 layer. After it come only CNOTs and the Z measurement, and RZ cannot change a Z measurement. So those 8
-angles have no effect at all: their gradient is zero. The circuit therefore has 64 working parameters out of
-72. We kept the circuit as specified and report this openly; it slightly favours the classical control,
-whose 72 weights all work.
+angles have no effect at all: their gradient is zero. The 3-layer circuit therefore has 64 working parameters
+out of 72 (the final 1-layer circuit: 16 out of 24). We kept the circuit as specified and report this openly;
+it slightly favours the classical control, whose 72 weights all work.
 
 ## 6. How gradients flow through a simulated circuit
 
@@ -231,4 +244,16 @@ same circuit without entanglement, 5 seeds each.
 | ACC | -0.0115 | 0.0282 | [0.904, 0.946] vs [0.909, 0.950] | yes | 1 of 5 | **no significant difference** |
 <!-- /results:compare -->
 
-What these tables mean is discussed in [REPORT.md](REPORT.md).
+**What they showed, in plain words.**
+
+- *Size of the circuit:* 4 or 8 qubits, 1, 3 or 5 layers all scored the same on validation, within the
+  random variation between seeds. The circuit's size is not what limits this model; the CNN is doing the
+  heavy lifting. So the smallest circuit that kept up (8 qubits, 1 layer) was chosen.
+- *Re-uploading off:* no difference either.
+- *Entanglement off:* no loss at all; if anything slightly better on both validation and test. Without CNOTs
+  each qubit is just a learned cosine of one feature, so the best "quantum" variant was the one with no
+  quantum interaction between qubits.
+- *Quantum vs classical middle block:* statistically the same, with the classical block slightly ahead in
+  every average. The quantum layer works, but it does not help.
+
+The full discussion, with the statistics, is in [REPORT.md](REPORT.md).

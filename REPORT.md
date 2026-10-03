@@ -81,18 +81,29 @@ Validation split only (524 images); mean ± sample std over seeds 0-2. Checkpoin
 
 ![Sweep](figures/sweep_val_auc.png)
 
-SWEEP_DISCUSSION
+All eight settings reach practically the same validation AUC: the spread between settings is no larger than
+the seed-to-seed spread within a setting, so validation AUC cannot rank these circuits. Width (4 or 8 qubits),
+depth (1, 3 or 5 layers), entanglement and re-uploading all leave it unchanged within noise. Validation loss
+separates two settings: the 4-qubit, 1-layer circuit is worse and less stable, and the circuit **without
+entanglement has clearly the lowest loss** (better-calibrated probabilities at the same ranking quality).
+
+Following the brief's rule (when settings tie, prefer the smaller circuit), the final hybrid is
+**8 qubits x 1 layer**: the smallest circuit that ties with the best setting on both validation AUC and
+validation loss, by the same "difference smaller than the seed standard deviation" test used later for the
+main comparison. The full reasoning, including why 4 x 3 was not preferred, is in `DECISIONS.md`. Because this
+circuit has 24 angles (16 effective) against the classical control's 72 weights, the parameter-matched
+8 x 3 circuit was added as a secondary comparison before any test score was computed (Section 6.2).
 
 ## 6. Results on the test set
 
 <!-- results:main -->
-| Model | Params: total / middle block (effective) | Seeds | Test AUC | Test ACC | Sensitivity | Specificity | Balanced acc. | Ensemble AUC [95% CI] | Ensemble ACC [95% CI] |
+| Model | Params: total / compared block (effective) | Seeds | Test AUC | Test ACC | Sensitivity | Specificity | Balanced acc. | Ensemble AUC [95% CI] | Ensemble ACC [95% CI] |
 |---|---|---|---|---|---|---|---|---|---|
 | Hybrid 8q x 1L | 60,953 / 24 (16) | 5 | 0.975 ± 0.004 | 0.916 ± 0.028 | 0.971 ± 0.016 | 0.823 ± 0.095 | 0.897 ± 0.041 | 0.979 [0.967, 0.989] | 0.925 [0.904, 0.946] |
 | Classical control (8 units) | 61,001 / 72 (72) | 5 | 0.978 ± 0.003 | 0.931 ± 0.016 | 0.966 ± 0.016 | 0.872 ± 0.058 | 0.919 ± 0.024 | 0.981 [0.971, 0.989] | 0.941 [0.921, 0.958] |
 | Hybrid 8q x 1L, no entanglement | 60,953 / 24 (16) | 5 | 0.977 ± 0.003 | 0.927 ± 0.010 | 0.975 ± 0.010 | 0.848 ± 0.041 | 0.911 ± 0.016 | 0.981 [0.970, 0.990] | 0.931 [0.909, 0.950] |
 
-Mean ± sample standard deviation over seeds; ACC, sensitivity and specificity at threshold 0.5. Ensemble = average of the seeds' probabilities; CI = 2,000 bootstrap resamples of the 624 test images. 'Effective' excludes the last-layer RZ angles that provably cannot affect the circuit output.
+Mean ± sample standard deviation over seeds; ACC, sensitivity and specificity at threshold 0.5. Ensemble = average of the seeds' probabilities; CI = 2,000 bootstrap resamples of the 624 test images. Compared block = the 8 -> 8 middle block, or the 2x2 front end for the quanvolution models. 'Effective' excludes the last-layer RZ angles that provably cannot affect the circuit output.
 <!-- /results:main -->
 
 <!-- results:target -->
@@ -158,41 +169,195 @@ Published baselines for reference (different models and protocol; they are conte
 | ACC | -0.0115 | 0.0282 | [0.904, 0.946] vs [0.909, 0.950] | yes | 1 of 5 | **no significant difference** |
 <!-- /results:compare -->
 
-COMPARE_DISCUSSION
+**No. The quantum layer matched the classical control within noise and was slightly worse in every point
+estimate.** By the decision rule fixed before the test set was read, there is no significant difference on
+either AUC or ACC: the mean differences are smaller than one seed standard deviation and the ensembles'
+confidence intervals overlap almost completely. The direction, however, is consistent: the classical control
+has the higher test AUC on every paired seed, the higher mean accuracy, and the better ensemble on both
+metrics. The honest summary is "statistically indistinguishable, never better".
+
+The secondary, parameter-matched comparison (Section 6.2) gives the same answer, so the result does not
+depend on the final hybrid having fewer parameters than the control.
+
+**Sensitivity versus specificity.** All models catch almost every pneumonia case in the test set (high
+sensitivity) and give most of their errors as false alarms on normal X-rays. The hybrid's specificity is lower
+and much more seed-dependent than the control's (see the per-seed table and the confusion matrices). For
+screening, high sensitivity is the property that matters most, because a missed pneumonia costs more than a
+second look at a healthy child; the price is extra false alarms. The low test specificity relative to
+validation is largely the dataset shift: the test split has proportionally more normal images, from a
+different collection, than the data the model and its threshold were fitted on.
+
+### 6.2 Secondary: parameter-matched 8 x 3 circuit (72 vs 72)
+
+<!-- results:matched -->
+| Model | Params: total / compared block (effective) | Seeds | Test AUC | Test ACC | Sensitivity | Specificity | Balanced acc. | Ensemble AUC [95% CI] | Ensemble ACC [95% CI] |
+|---|---|---|---|---|---|---|---|---|---|
+| Hybrid 8q x 3L | 61,001 / 72 (64) | 5 | 0.975 ± 0.004 | 0.916 ± 0.023 | 0.984 ± 0.010 | 0.803 ± 0.076 | 0.894 ± 0.033 | 0.980 [0.969, 0.990] | 0.920 [0.897, 0.941] |
+| Classical control (8 units) | 61,001 / 72 (72) | 5 | 0.978 ± 0.003 | 0.931 ± 0.016 | 0.966 ± 0.016 | 0.872 ± 0.058 | 0.919 ± 0.024 | 0.981 [0.971, 0.989] | 0.941 [0.921, 0.958] |
+
+Mean ± sample standard deviation over seeds; ACC, sensitivity and specificity at threshold 0.5. Ensemble = average of the seeds' probabilities; CI = 2,000 bootstrap resamples of the 624 test images. Compared block = the 8 -> 8 middle block, or the 2x2 front end for the quanvolution models. 'Effective' excludes the last-layer RZ angles that provably cannot affect the circuit output.
+
+**A = Hybrid 8q x 3L, B = Classical control (8 units)**
+
+| Metric | Mean A − B | Larger seed std | Ensemble 95% CI, A vs B | CIs overlap | Seeds where A > B | Verdict |
+|---|---|---|---|---|---|---|
+| AUC | -0.0026 | 0.0040 | [0.969, 0.990] vs [0.971, 0.989] | yes | 2 of 5 | **no significant difference** |
+| ACC | -0.0144 | 0.0225 | [0.897, 0.941] vs [0.921, 0.958] | yes | 1 of 5 | **no significant difference** |
+<!-- /results:matched -->
 
 ## 7. Ablations
 
-ABLATION_DISCUSSION
+**Entanglement (Phase 4, test set; second table in Section 6.1).** Removing every CNOT did not hurt. The
+no-entanglement circuit's means are slightly above the entangled circuit's on both metrics and its accuracy
+varies less between seeds; by the decision rule the difference is not significant. On validation (Section 5)
+it also had the lowest loss of any setting. So entanglement, the one ingredient that makes the circuit
+"quantum" in an interesting sense, brought no measurable benefit here.
+
+**Why: what the final circuit actually computes.** For one layer the circuit has an exact closed form
+(checked to 1e-5 by `tests/test_smoke.py::test_one_layer_circuit_has_closed_form`). Each qubit on its own
+returns
+
+    c_i = cos(theta_i) cos(x_i) - sin(theta_i) cos(phi_i) sin(x_i)  =  r_i cos(x_i + delta_i),  r_i <= 1,
+
+a learned, phase-shifted cosine of its input with two effective parameters (the third angle has no effect,
+as noted in Section 3). Without CNOTs, these eight cosines *are* the outputs: the "quantum layer" is a
+sinusoidal activation function. With the CNOT ring, output k becomes the product c_0 c_1 ... c_k (and output 0
+the product c_1 ... c_7). Products of up to eight numbers of magnitude at most 1 shrink towards zero, so
+most entangled outputs carry little signal unless the network learns to keep every factor near +-1. That is
+a restrictive inductive bias rather than a useful one, which fits the ablation result. Deeper circuits with
+re-uploading have no such simple form, but the sweep found no validation benefit from depth either.
+
+**Re-uploading and depth (Phase 3, validation only).** Encoding the data once instead of before every layer,
+and using 1, 3 or 5 layers, made no difference beyond seed noise. With validation AUC saturated near its
+ceiling, the sweep cannot detect small effects; it does show that nothing about the circuit's design is a
+large lever on this task.
 
 ## 8. Extensions (reported separately from the main result)
 
 ### 8.1 Finite shots and hardware-like noise
 
 <!-- results:noise -->
+| Circuit simulation | Test AUC | Test ACC | Δ AUC vs exact |
+|---|---|---|---|
+| exact simulation | 0.9748 ± 0.0036 | 0.916 ± 0.028 | +0.0000 |
+| shots=1000 | 0.9746 ± 0.0037 | 0.914 ± 0.031 | -0.0002 |
+| p=0.001 | 0.9748 ± 0.0036 | 0.916 ± 0.028 | +0.0000 |
+| p=0.01 | 0.9748 ± 0.0036 | 0.916 ± 0.028 | +0.0000 |
+| p=0.05 | 0.9748 ± 0.0036 | 0.915 ± 0.029 | +0.0000 |
+
+Same trained weights, no retraining; mean ± std over 5 seeds. 'shots=1000': each <Z> estimated from 1,000 measurements. 'p=…': default.mixed simulator with a depolarising channel of probability p on every qubit after every layer.
 <!-- /results:noise -->
 
-NOISE_DISCUSSION
+The same evaluation on the 3-layer, parameter-matched circuit, where noise also acts between layers:
+
+<!-- results:noise_matched -->
+| Circuit simulation | Test AUC | Test ACC | Δ AUC vs exact |
+|---|---|---|---|
+| exact simulation | 0.9753 ± 0.0040 | 0.916 ± 0.023 | +0.0000 |
+| shots=1000 | 0.9755 ± 0.0039 | 0.918 ± 0.023 | +0.0003 |
+| p=0.001 | 0.9753 ± 0.0040 | 0.917 ± 0.022 | +0.0000 |
+| p=0.01 | 0.9754 ± 0.0039 | 0.916 ± 0.022 | +0.0001 |
+| p=0.05 | 0.9757 ± 0.0037 | 0.913 ± 0.028 | +0.0004 |
+
+Same trained weights, no retraining; mean ± std over 5 seeds. 'shots=1000': each <Z> estimated from 1,000 measurements. 'p=…': default.mixed simulator with a depolarising channel of probability p on every qubit after every layer.
+<!-- /results:noise_matched -->
+
+![Noise, final 1-layer circuit](figures/noise.png)
+![Noise, 3-layer circuit](figures/noise_matched.png)
+
+The trained hybrids were re-evaluated without retraining: once with each `<Z>` estimated from 1,000 shots
+(as a real device would), and once on a density-matrix simulator with a depolarising channel on every qubit
+after every layer. **Both models are essentially immune** to both kinds of noise at every level tested: AUC
+moves by far less than the seed-to-seed spread, and accuracy at the fixed 0.5 threshold barely moves.
+
+For the final 1-layer circuit this is guaranteed rather than lucky: its only noise sits just before the
+measurement, where a depolarising channel shrinks every `<Z>` by the same factor (1 - 4p/3). The linear head
+turns that into a monotone rescaling of the logit, which cannot reorder patients, so AUC cannot change; only
+the 0.5 threshold, and with it accuracy, is affected. In the 3-layer circuit the noise between layers changes
+the predicted probabilities noticeably at the highest p, yet the logits stay almost perfectly correlated with
+the noise-free ones, so the ranking survives again. Two caveats: depolarising noise is the most benign noise
+model (it only shrinks the signal), and real hardware adds readout errors, gate-specific errors and a
+connectivity-limited layout. Robustness of a model whose quantum part is not doing useful work is also a
+weaker statement than it sounds: a block that contributes little has little to lose.
 
 ### 8.2 Trainable quanvolution front end
 
 <!-- results:quanv -->
-| Model | Params: total / middle block (effective) | Seeds | Test AUC | Test ACC | Sensitivity | Specificity | Balanced acc. | Ensemble AUC [95% CI] | Ensemble ACC [95% CI] |
+| Model | Params: total / compared block (effective) | Seeds | Test AUC | Test ACC | Sensitivity | Specificity | Balanced acc. | Ensemble AUC [95% CI] | Ensemble ACC [95% CI] |
 |---|---|---|---|---|---|---|---|---|---|
-| Conv 2x2 control | 56,853 / 20 (20) | 3 | 0.978 ± 0.000 | 0.932 ± 0.008 | 0.946 ± 0.003 | 0.909 ± 0.021 | 0.927 ± 0.010 | 0.980 [0.970, 0.988] | 0.941 [0.921, 0.958] |
+| Quanvolution front end | 56,857 / 24 (20) | 5 | 0.973 ± 0.001 | 0.916 ± 0.017 | 0.929 ± 0.040 | 0.895 ± 0.079 | 0.912 ± 0.026 | 0.976 [0.964, 0.985] | 0.934 [0.915, 0.954] |
+| Conv 2x2 control | 56,853 / 20 (20) | 5 | 0.977 ± 0.002 | 0.927 ± 0.009 | 0.934 ± 0.016 | 0.915 ± 0.020 | 0.925 ± 0.009 | 0.979 [0.969, 0.988] | 0.933 [0.913, 0.952] |
 
-Mean ± sample standard deviation over seeds; ACC, sensitivity and specificity at threshold 0.5. Ensemble = average of the seeds' probabilities; CI = 2,000 bootstrap resamples of the 624 test images. 'Effective' excludes the last-layer RZ angles that provably cannot affect the circuit output.
+Mean ± sample standard deviation over seeds; ACC, sensitivity and specificity at threshold 0.5. Ensemble = average of the seeds' probabilities; CI = 2,000 bootstrap resamples of the 624 test images. Compared block = the 8 -> 8 middle block, or the 2x2 front end for the quanvolution models. 'Effective' excludes the last-layer RZ angles that provably cannot affect the circuit output.
+
+**A = Quanvolution front end, B = Conv 2x2 control**
+
+| Metric | Mean A − B | Larger seed std | Ensemble 95% CI, A vs B | CIs overlap | Seeds where A > B | Verdict |
+|---|---|---|---|---|---|---|
+| AUC | -0.0036 | 0.0023 | [0.964, 0.985] vs [0.969, 0.988] | yes | 1 of 5 | **no significant difference** |
+| ACC | -0.0109 | 0.0174 | [0.915, 0.954] vs [0.913, 0.952] | yes | 1 of 5 | **no significant difference** |
 <!-- /results:quanv -->
 
-QUANV_DISCUSSION
+A 4-qubit, 2-layer circuit replaces the first convolution: it reads every non-overlapping 2 x 2 patch of the
+image as four rotation angles and outputs four feature maps. Its control is a 2 x 2, stride-2 convolution with
+four channels and `tanh`; both feed the same reduced CNN and head, and both compared blocks have 20 effective
+parameters. The result repeats the main finding. The quantum front end trains to a competitive score, but the
+plain convolution has the higher AUC on most seeds. The AUC gap is larger than the seed standard deviation,
+yet the ensemble confidence intervals overlap, so by the fixed rule it is "no significant difference"; the
+ensembles' accuracies are indistinguishable. The quanvolution's specificity also varies much more between
+seeds. It is the most expensive model in the project: it simulates one circuit per patch, 196 per image, which
+makes its runs several times slower than the control's (Section 9).
 
 ### 8.3 Higher resolution (64 x 64, MedMNIST+)
 
 <!-- results:s64 -->
+| Model | Params: total / compared block (effective) | Seeds | Test AUC | Test ACC | Sensitivity | Specificity | Balanced acc. | Ensemble AUC [95% CI] | Ensemble ACC [95% CI] |
+|---|---|---|---|---|---|---|---|---|---|
+| Hybrid 8q x 1L, 64x64 | 60,953 / 24 (16) | 5 | 0.966 ± 0.007 | 0.911 ± 0.022 | 0.964 ± 0.017 | 0.823 ± 0.077 | 0.894 ± 0.032 | 0.974 [0.962, 0.985] | 0.925 [0.904, 0.944] |
+| Classical control (8 units), 64x64 | 61,001 / 72 (72) | 5 | 0.973 ± 0.002 | 0.926 ± 0.008 | 0.936 ± 0.013 | 0.908 ± 0.012 | 0.922 ± 0.007 | 0.975 [0.962, 0.985] | 0.933 [0.913, 0.950] |
+
+Mean ± sample standard deviation over seeds; ACC, sensitivity and specificity at threshold 0.5. Ensemble = average of the seeds' probabilities; CI = 2,000 bootstrap resamples of the 624 test images. Compared block = the 8 -> 8 middle block, or the 2x2 front end for the quanvolution models. 'Effective' excludes the last-layer RZ angles that provably cannot affect the circuit output.
+
+**A = Hybrid 8q x 1L, 64x64, B = Classical control (8 units), 64x64**
+
+| Metric | Mean A − B | Larger seed std | Ensemble 95% CI, A vs B | CIs overlap | Seeds where A > B | Verdict |
+|---|---|---|---|---|---|---|
+| AUC | -0.0071 | 0.0072 | [0.962, 0.985] vs [0.962, 0.985] | yes | 0 of 5 | **no significant difference** |
+| ACC | -0.0144 | 0.0216 | [0.904, 0.944] vs [0.913, 0.950] | yes | 1 of 5 | **no significant difference** |
 <!-- /results:s64 -->
 
-S64_DISCUSSION
+The final hybrid and its control, retrained unchanged on the 64 x 64 MedMNIST+ version of the same images and
+splits. These numbers are **not comparable with the 28 x 28 baselines**. Two observations. First, the
+quantum-vs-classical pattern is the same as at 28 x 28: no significant difference by the fixed rule, with the
+classical control ahead in mean AUC and accuracy, ahead on AUC for every paired seed, and with much smaller
+seed-to-seed spread; the hybrid again buys a little sensitivity with a larger loss of specificity.
+Second, neither model gained from the higher resolution; both score slightly below their 28 x 28 versions. The
+backbone, augmentation and 30-epoch schedule were designed for 28 x 28 and were deliberately not re-tuned (that
+would have meant selecting on these results), so this says only that more pixels are not free accuracy for
+this small network, not that 64 x 64 images carry less information.
 
-## 9. Compute
+## 9. Training diagnostics and compute
+
+Circuit gradients (barren-plateau check):
+
+<!-- results:gradients -->
+| Run group | Runs | Smallest epoch mean | Largest epoch mean | Last epoch (mean over runs) |
+|---|---|---|---|---|
+| hybrid_q4_l1 | 3 | 4.1e-03 | 3.5e-02 | 2.4e-02 |
+| hybrid_q4_l3 | 3 | 1.5e-02 | 6.4e-02 | 3.1e-02 |
+| hybrid_q4_l5 | 3 | 1.8e-02 | 5.5e-02 | 4.1e-02 |
+| hybrid_q8_l1 | 5 | 1.1e-02 | 6.5e-02 | 3.5e-02 |
+| hybrid_q8_l1_noent | 5 | 1.1e-02 | 2.7e-02 | 1.6e-02 |
+| hybrid_q8_l1_s64 | 5 | 1.2e-02 | 7.2e-02 | 4.3e-02 |
+| hybrid_q8_l3 | 5 | 5.6e-03 | 6.1e-02 | 3.0e-02 |
+| hybrid_q8_l3_noent | 3 | 1.7e-02 | 3.5e-02 | 2.2e-02 |
+| hybrid_q8_l3_noreup | 3 | 1.6e-02 | 3.6e-02 | 2.3e-02 |
+| hybrid_q8_l5 | 3 | 1.0e-02 | 4.5e-02 | 2.2e-02 |
+
+L2 norm of the circuit-angle gradients, averaged over the steps of each epoch (before clipping). A barren plateau would show as values collapsing towards zero.
+<!-- /results:gradients -->
+
+Training time:
 
 <!-- results:timing -->
 | Model | Seeds | Mean epoch time (s) | Mean training run (min, 30 epochs) | Fastest run (min) |
@@ -201,7 +366,10 @@ S64_DISCUSSION
 | Classical control (8 units) | 5 | 11.7 | 5.8 | 3.6 |
 | Hybrid 8q x 1L, no entanglement | 5 | 17.1 | 8.5 | 8.2 |
 | Hybrid 8q x 3L | 5 | 24.6 | 12.3 | 6.6 |
-| Conv 2x2 control | 3 | 7.9 | 3.9 | 3.8 |
+| Quanvolution front end | 5 | 57.0 | 28.5 | 25.0 |
+| Conv 2x2 control | 5 | 9.2 | 4.6 | 3.8 |
+| Hybrid 8q x 1L, 64x64 | 5 | 105.5 | 52.7 | 43.4 |
+| Classical control (8 units), 64x64 | 5 | 78.3 | 39.2 | 28.6 |
 
 CPU only, 2 PyTorch threads per run; up to 8 runs shared the 20-core CPU at once, so single-run times on an idle machine are shorter.
 <!-- /results:timing -->
@@ -226,7 +394,64 @@ CPU only, 2 PyTorch threads per run; up to 8 runs shared the 20-core CPU at once
 
 ## 11. Likely examiner questions
 
-EXAMINER_QA
+**Did the quantum layer help?** No. It matched the classical control within noise and was slightly worse in
+every point estimate (Section 6.1); the parameter-matched circuit agrees (Section 6.2).
+
+**So where is the quantum advantage?** There is none, and this setup could not show one. Eight qubits are
+256 complex amplitudes, simulated exactly on a laptop; whatever the circuit computes, a classical program just
+computed it. The final one-layer circuit even reduces to a short closed-form formula (Section 7). The
+question this project can answer is narrower: does the circuit's particular inductive bias (sinusoidal
+features, products created by entanglement) suit this task better than `tanh(Wx + b)`? Here it does not.
+
+**Is the comparison fair?** The two models share the backbone, data, augmentation, loss, optimizer, schedule,
+seeds and checkpoint rule; only the 8 -> 8 block differs. The default 8 x 3 circuit has exactly the control's
+72 parameters (64 effective); the chosen 8 x 1 circuit has fewer, so both comparisons are reported, and they
+agree. The circuit's angles get a larger learning rate than the control's weights, as the brief prescribes,
+because angles are periodic and start near zero.
+
+**Why are test scores lower than validation scores?** The test split is a separate collection with a different
+class balance (62.5% vs 74% pneumonia). Validation is nearly separable; test is not. This is documented by
+MedMNIST and expected; it was not "fixed" with test data.
+
+**How do you know nothing leaked from the test set?** Only `evaluate.py` can read the test split; `train.py`
+never imports its loader. Settings, epochs, seeds and threshold were all fixed on validation data, and the
+final configuration was frozen and committed before the first test score (see the git history). Each
+checkpoint was scored once and cached. The official MedMNIST `Evaluator` agrees with our metrics to 1e-9, and
+the leakage alarms (test ACC above 0.96, test above validation) never fired.
+
+**Why 8 x 1 and not the default 8 x 3?** Every circuit tied on validation AUC; the brief's tie rule prefers the
+smaller circuit. 8 x 1 was the smallest that also tied on validation loss. The decision and its numbers were
+recorded in `DECISIONS.md` before any test evaluation.
+
+**Why report accuracy at 0.5 instead of tuning the threshold?** 0.5 is the MedMNIST convention, so it keeps the
+numbers comparable with the published baselines. Tuning the threshold on validation is unreliable here because
+validation is almost perfectly separable and from a different class balance; tuning it on test would be leakage.
+
+**Why do 8 of the 72 angles not matter?** The last gate on each qubit is `RZ(omega)`; it is followed only by
+CNOTs and a Z measurement, and those commute with RZ, so omega cannot change the result. The test suite checks
+that these gradients are zero and all others are not.
+
+**Did you hit a barren plateau?** No. The angles start small (std 0.1) instead of uniformly in [0, 2pi], and
+`history.csv` logs the gradient norm of the circuit angles every epoch. In every hybrid run it stays within
+roughly one order of magnitude and does not trend towards zero (table in Section 9).
+
+**How would this run on a real quantum computer?** Each image would need the circuit run many times to estimate
+the 8 expectation values (shots), and training would use the parameter-shift rule (two extra circuit runs per
+angle per gradient). Section 8.1 shows what finite shots and depolarising noise do to the trained model
+without retraining.
+
+**Your hybrid beats ResNet-18. Is that the quantum layer?** No: the classical control beats it by the same
+margin. The gain over the published baseline comes from the shared classical recipe (a small CNN suited to
+28 x 28 inputs, augmentation, class weighting, OneCycle schedule, best-validation-AUC checkpointing). The
+baselines are context, not a matched comparison.
+
+**Some papers report much higher hybrid accuracy on this dataset.** Their splits and model-selection
+protocols were not checked here, so they are not comparable; selecting on test data or reporting the best seed
+inflates accuracy by several points on this dataset, as the per-seed table shows.
+
+**Why five seeds and a bootstrap?** Single-seed test accuracy moves by several points between seeds (per-seed
+table), so no conclusion rests on one run. The seed standard deviation measures training randomness; the
+bootstrap interval measures how much the score depends on which 624 patients are in the test set.
 
 ## 12. References
 

@@ -63,6 +63,26 @@ def test_every_quantum_weight_gets_gradient():
     assert bool((inert < 1e-6).all()), f"last-layer omega unexpectedly active: {inert}"
 
 
+@pytest.mark.parametrize("entangle", [False, True])
+def test_one_layer_circuit_has_closed_form(entangle):
+    """The final 8-qubit, 1-layer circuit equals a short classical formula (REPORT.md, Section 7).
+
+    Each qubit alone gives c_i = cos(theta_i) cos(x_i) - sin(theta_i) cos(phi_i) sin(x_i).
+    The CNOT ring turns the outputs into products: out_0 = c_1 ... c_7, out_k = c_0 ... c_k.
+    """
+    torch.manual_seed(3)
+    layer = make_quantum_layer(8, 1, entangle=entangle)
+    with torch.no_grad():
+        layer.weights.normal_(0, 1.0)          # large random angles, not just the small initial ones
+        x = angles(32)
+        out = layer(x)
+        phi, theta = layer.weights[0, :, 0], layer.weights[0, :, 1]
+        c = torch.cos(theta) * torch.cos(x) - torch.sin(theta) * torch.cos(phi) * torch.sin(x)
+    if entangle:
+        c = torch.stack([c[:, 1:].prod(1)] + [c[:, :k + 1].prod(1) for k in range(1, 8)], dim=1)
+    assert torch.allclose(out, c, atol=1e-5)
+
+
 @pytest.mark.parametrize("mode", ["hybrid", "classical"])
 def test_save_rebuild_load_reproduces_predictions(mode, tmp_path):
     torch.manual_seed(0)
