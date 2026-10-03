@@ -93,6 +93,7 @@ def test_loader(size: int):
 
 @cache
 def official(size: int) -> Evaluator:
+    test_loader(size)   # downloads this resolution's file if missing; Evaluator only reads from disk
     return Evaluator("pneumoniamnist", "test", size=None if size == 28 else size, root=str(DATA_DIR))
 
 
