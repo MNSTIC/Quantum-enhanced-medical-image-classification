@@ -2,6 +2,7 @@
 
     python src/sweep.py --stage sweep     # Phase 3: 8 settings x 3 seeds, validation only
     python src/sweep.py --stage final     # Phase 4: chosen hybrid, classical control, no-entanglement; 5 seeds
+    python src/sweep.py --stage matched   # Phase 4 secondary: parameter-matched 8x3 hybrid, 5 seeds
     python src/sweep.py --stage quanv     # Phase 5.2: quanvolution front end and its classical control
     python src/sweep.py --stage s64       # Phase 5.3: final hybrid and control on 64x64 images
 
@@ -18,7 +19,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import fields, replace
 
-from config import FINAL_HYBRID, ROOT, Config
+from config import FINAL_HYBRID, MATCHED_HYBRID, ROOT, Config
 
 DEFAULT = Config(mode="hybrid", n_qubits=8, n_layers=3)
 
@@ -28,6 +29,7 @@ STAGES: dict[str, tuple[list[Config], list[int]]] = {
               + [replace(DEFAULT, entangle=False), replace(DEFAULT, reupload=False)], [0, 1, 2]),
     "final": ([FINAL_HYBRID, Config(mode="classical", n_qubits=FINAL_HYBRID.n_qubits),
                replace(FINAL_HYBRID, entangle=False)], [0, 1, 2, 3, 4]),
+    "matched": ([MATCHED_HYBRID], [0, 1, 2, 3, 4]),
     "quanv": ([Config(mode="quanv"), Config(mode="quanv_classical")], [0, 1, 2, 3, 4]),
     "s64": ([replace(FINAL_HYBRID, size=64), Config(mode="classical", n_qubits=FINAL_HYBRID.n_qubits, size=64)],
             [0, 1, 2, 3, 4]),
@@ -54,12 +56,11 @@ def run_job(cfg: Config) -> str:
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
-    p.add_argument("--stage", choices=STAGES, required=True)
+    p.add_argument("--stage", choices=STAGES, nargs="+", required=True, help="one or more stages, run in order")
     p.add_argument("--workers", type=int, default=8, help="parallel train.py processes (x2 threads each)")
     args = p.parse_args()
 
-    settings, seeds = STAGES[args.stage]
-    jobs = [replace(s, seed=k) for s in settings for k in seeds]
+    jobs = [replace(s, seed=k) for stage in args.stage for s in STAGES[stage][0] for k in STAGES[stage][1]]
     todo = [j for j in jobs if not (j.run_dir() / "metrics.json").exists()]
     print(f"{args.stage}: {len(jobs)} jobs, {len(jobs) - len(todo)} already done, running {len(todo)} "
           f"with {args.workers} workers", flush=True)

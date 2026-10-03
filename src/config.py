@@ -68,9 +68,13 @@ class Config:
         return RUNS_DIR / self.run_name() / f"seed{self.seed}"
 
 
-# The hybrid configuration chosen in Phase 3 on validation data only (reason in DECISIONS.md).
+# The hybrid configuration chosen in Phase 3 on validation data only (reason in DECISIONS.md):
+# all circuits tied on validation AUC, so the smallest circuit that also tied on validation loss.
 # Phase 4 trains it with 5 seeds; evaluate.py scores it on the test set.
-FINAL_HYBRID = Config(mode="hybrid", n_qubits=8, n_layers=3)
+FINAL_HYBRID = Config(mode="hybrid", n_qubits=8, n_layers=1)
+# Declared before any test scoring: the default 8x3 circuit, whose 72 angles match the classical
+# control's 72 weights, is also trained with 5 seeds as a secondary, parameter-matched comparison.
+MATCHED_HYBRID = Config(mode="hybrid", n_qubits=8, n_layers=3)
 
 
 def _str2bool(s: str) -> bool:

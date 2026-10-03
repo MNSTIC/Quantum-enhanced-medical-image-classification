@@ -42,7 +42,7 @@ BASELINES = {
 REFERENCE_LINES = ("ResNet-18 (28x28)", "ResNet-50 (224x224)", "Google AutoML Vision")
 NOISE_SETTINGS = {"shots=1000": {"shots": 1000}, "p=0.001": {"noise_p": 0.001},
                   "p=0.01": {"noise_p": 0.01}, "p=0.05": {"noise_p": 0.05}}
-DOCS = (ROOT / "README.md", ROOT / "REPORT.md")
+DOCS = (ROOT / "README.md", ROOT / "REPORT.md", ROOT / "EXPLAINED.md")
 
 
 # ---------------------------------------------------------------------------------------- helpers
@@ -73,7 +73,7 @@ def seed_dirs(cfg: Config) -> list[Path]:
 
 
 def inject(key: str, text: str) -> None:
-    """Replace the block between the results markers in README.md and REPORT.md."""
+    """Replace the block between the results markers in README.md, REPORT.md and EXPLAINED.md."""
     start, end = f"<!-- results:{key} -->", f"<!-- /results:{key} -->"
     for path in DOCS:
         if not path.exists():
@@ -142,7 +142,8 @@ def score_group(cfg: Config) -> dict | None:
          "n_params": info["n_params"], "n_middle": info["n_params_probe"],
          "histories": [pd.read_csv(d / "history.csv") for d in dirs],
          "epoch_s": float(np.mean([load_json(d / "metrics.json")["epoch_s_mean"] for d in dirs])),
-         "train_min": float(np.mean([load_json(d / "metrics.json")["train_s"] for d in dirs])) / 60}
+         "train_min": float(np.mean([load_json(d / "metrics.json")["train_s"] for d in dirs])) / 60,
+         "fastest_min": float(np.min([load_json(d / "metrics.json")["train_s"] for d in dirs])) / 60}
     # Section 10 of the brief: implausibly good numbers mean leakage or a metric bug until shown otherwise.
     if seeds["acc"].mean() > 0.96 or seeds["auc"].mean() > seeds["val_auc"].mean():
         print(f"  WARNING {r['name']}: test ACC > 0.96 or test AUC above validation AUC; check for leakage")
@@ -218,8 +219,10 @@ def baseline_table() -> str:
 
 
 def timing_table(res: list[dict]) -> str:
-    rows = ["| Model | Seeds | Mean epoch time (s) | Mean training run (min, 30 epochs) |", "|---|---|---|---|"]
-    rows += [f"| {r['label']} | {len(r['seeds'])} | {r['epoch_s']:.1f} | {r['train_min']:.1f} |" for r in res]
+    rows = ["| Model | Seeds | Mean epoch time (s) | Mean training run (min, 30 epochs) | Fastest run (min) |",
+            "|---|---|---|---|---|"]
+    rows += [f"| {r['label']} | {len(r['seeds'])} | {r['epoch_s']:.1f} | {r['train_min']:.1f} | {r['fastest_min']:.1f} |"
+             for r in res]
     rows.append("\nCPU only, 2 PyTorch threads per run; up to 8 runs shared the 20-core CPU at once, "
                 "so single-run times on an idle machine are shorter.")
     return "\n".join(rows)
@@ -324,9 +327,10 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--val-only", action="store_true", help="only the validation sweep table; never load test")
     ap.add_argument("--noise", action="store_true", help="also run the Phase 5.1 shots/noise evaluation")
+    ap.add_argument("--threads", type=int, default=4, help="torch CPU threads (more helps the noisy simulator)")
     args = ap.parse_args()
     sys.stdout.reconfigure(encoding="utf-8")
-    torch.set_num_threads(4)
+    torch.set_num_threads(args.threads)
     FIG_DIR.mkdir(exist_ok=True)
     sections: dict[str, str] = {}
 
@@ -341,8 +345,11 @@ def main() -> None:
     if not args.val_only:
         print("scoring on the test set:")
         main_res = [r for r in map(score_group, STAGES["final"][0]) if r]
+        matched = [r for r in map(score_group, STAGES["matched"][0]) if r]
         ext = {k: [r for r in map(score_group, STAGES[k][0]) if r] for k in ("quanv", "s64")}
-        everything = main_res + ext["quanv"] + ext["s64"]
+        everything = main_res + matched + ext["quanv"] + ext["s64"]
+        if matched and len(main_res) > 1:   # secondary, declared before test scoring: 72 vs 72 parameters
+            sections["matched"] = main_table(matched + main_res[1:2]) + "\n\n" + compare(matched[0], main_res[1])
         if everything:
             pd.DataFrame([row for r in everything for row in summary_rows(r)]).to_csv(RUNS_DIR / "summary.csv", index=False)
             sections["timing"] = timing_table(everything)

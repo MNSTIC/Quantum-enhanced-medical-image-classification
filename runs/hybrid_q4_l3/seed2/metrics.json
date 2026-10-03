@@ -1,0 +1,19 @@
+{
+  "best_epoch": 17,
+  "val_loss": 0.0566252866432867,
+  "val_auc": 0.9959821003522803,
+  "val_acc": 0.9580152671755725,
+  "val_sensitivity": 0.9511568123393316,
+  "val_specificity": 0.9777777777777777,
+  "val_precision": 0.9919571045576407,
+  "val_f1": 0.9711286089238844,
+  "val_balanced_acc": 0.9644672950585547,
+  "val_tn": 132,
+  "val_fp": 3,
+  "val_fn": 19,
+  "val_tp": 370,
+  "n_params": 60701,
+  "n_params_probe": 36,
+  "train_s": 1440.905261039734,
+  "epoch_s_mean": 48.01539571285248
+}
