@@ -24,9 +24,17 @@ caused by the quantum circuit. Everything runs on a laptop CPU; no quantum hardw
 ## Results (test set, 624 images, 5 seeds)
 
 <!-- results:main -->
+| Model | Params: total / middle block (effective) | Seeds | Test AUC | Test ACC | Sensitivity | Specificity | Balanced acc. | Ensemble AUC [95% CI] | Ensemble ACC [95% CI] |
+|---|---|---|---|---|---|---|---|---|---|
+| Hybrid 8q x 1L | 60,953 / 24 (16) | 5 | 0.975 ± 0.004 | 0.916 ± 0.028 | 0.971 ± 0.016 | 0.823 ± 0.095 | 0.897 ± 0.041 | 0.979 [0.967, 0.989] | 0.925 [0.904, 0.946] |
+| Classical control (8 units) | 61,001 / 72 (72) | 5 | 0.978 ± 0.003 | 0.931 ± 0.016 | 0.966 ± 0.016 | 0.872 ± 0.058 | 0.919 ± 0.024 | 0.981 [0.971, 0.989] | 0.941 [0.921, 0.958] |
+| Hybrid 8q x 1L, no entanglement | 60,953 / 24 (16) | 5 | 0.977 ± 0.003 | 0.927 ± 0.010 | 0.975 ± 0.010 | 0.848 ± 0.041 | 0.911 ± 0.016 | 0.981 [0.970, 0.990] | 0.931 [0.909, 0.950] |
+
+Mean ± sample standard deviation over seeds; ACC, sensitivity and specificity at threshold 0.5. Ensemble = average of the seeds' probabilities; CI = 2,000 bootstrap resamples of the 624 test images. 'Effective' excludes the last-layer RZ angles that provably cannot affect the circuit output.
 <!-- /results:main -->
 
 <!-- results:target -->
+Target (beat ResNet-18 at 28x28, AUC 0.944 / ACC 0.854): Hybrid 8q x 1L mean test AUC 0.975 (+0.031), ACC 0.916 (+0.062) over 5 seeds: **met**.
 <!-- /results:target -->
 
 ![Test scores per model](figures/test_scores.png)
@@ -100,6 +108,15 @@ not used: below about 15 qubits a GPU simulates slower than the CPU). The table 
 `metrics.json` of every run; the "fastest run" column is the closest to a single run on an idle machine.
 
 <!-- results:timing -->
+| Model | Seeds | Mean epoch time (s) | Mean training run (min, 30 epochs) | Fastest run (min) |
+|---|---|---|---|---|
+| Hybrid 8q x 1L | 5 | 19.1 | 9.6 | 8.3 |
+| Classical control (8 units) | 5 | 11.7 | 5.8 | 3.6 |
+| Hybrid 8q x 1L, no entanglement | 5 | 17.1 | 8.5 | 8.2 |
+| Hybrid 8q x 3L | 5 | 24.6 | 12.3 | 6.6 |
+| Conv 2x2 control | 3 | 7.9 | 3.9 | 3.8 |
+
+CPU only, 2 PyTorch threads per run; up to 8 runs shared the 20-core CPU at once, so single-run times on an idle machine are shorter.
 <!-- /results:timing -->
 
 ## Project layout

@@ -45,7 +45,7 @@ def training_curves(histories: dict[str, list[pd.DataFrame]], path: Path) -> Non
             ax.fill_between(ep, m - s, m + s, color=color, alpha=0.18, linewidth=0)
         ax.set_title(title)
         ax.set_xlabel("epoch")
-    axes[2].set_ylim(0.95, 1.0)
+    axes[2].set_ylim(0.96, 1.0)   # early epochs dip below; the late-epoch plateau is what matters
     axes[0].legend(fontsize=9)
     fig.suptitle("Training curves: mean over seeds, band = 1 standard deviation", fontsize=11)
     _save(fig, path)
@@ -91,22 +91,26 @@ def score_bars(scores: dict[str, dict], baselines: dict[str, tuple[float, float]
 
     `scores[label] = {"auc": array over seeds, "acc": array over seeds}`.
     """
-    fig, axes = plt.subplots(1, 2, figsize=(11, 4.4))
+    import textwrap
+
+    fig, axes = plt.subplots(1, 2, figsize=(13, 4.8))
     labels = list(scores)
     for k, (metric, ax) in enumerate(zip(("auc", "acc"), axes)):
         for i, (label, color) in enumerate(zip(labels, SERIES)):
             v = np.asarray(scores[label][metric])
+            sd = v.std(ddof=1) if len(v) > 1 else 0.0
             ax.bar(i, v.mean(), width=0.6, color=color, edgecolor=SURFACE, linewidth=2)
-            ax.errorbar(i, v.mean(), yerr=v.std(ddof=1) if len(v) > 1 else 0, color=INK, capsize=5, linewidth=1.2)
-            ax.scatter(np.full(len(v), i) + np.linspace(-0.12, 0.12, len(v)), v, s=14, color=INK, zorder=3)
-            ax.text(i, v.mean() + 0.006, f"{v.mean():.3f}", ha="center", va="bottom", fontsize=9, color=INK)
+            ax.errorbar(i, v.mean(), yerr=sd, color=INK, capsize=5, linewidth=1.2)
+            ax.scatter(np.full(len(v), i + 0.2) + np.linspace(-0.05, 0.05, len(v)), v, s=14, color=INK, zorder=3)
+            ax.text(i, max(v.max(), v.mean() + sd) + 0.004, f"{v.mean():.3f}", ha="center", va="bottom",
+                    fontsize=9, color=INK)
         for name, vals in baselines.items():
             ax.axhline(vals[k], color=INK2, linestyle="--", linewidth=1)
-            ax.text(len(labels) - 0.45, vals[k], name, fontsize=8, color=INK2, va="center")
-        ax.set_xticks(range(len(labels)), [lab.replace(", ", ",\n") for lab in labels], fontsize=9)
-        ax.set_xlim(-0.5, len(labels) + 1.4)
+            ax.text(len(labels) - 0.4, vals[k] + 0.002, name, fontsize=8, color=INK2, va="bottom")
+        ax.set_xticks(range(len(labels)), [textwrap.fill(lab, 16) for lab in labels], fontsize=9)
+        ax.set_xlim(-0.5, len(labels) + 1.2)
         ax.set_ylim(0.80, 1.0)
-        ax.set_title(f"Test {metric.upper()} (threshold 0.5 for ACC)")
+        ax.set_title("Test AUC" if metric == "auc" else "Test ACC (threshold 0.5)")
     fig.suptitle("Test scores per model: bar = mean of seeds, whisker = 1 std, dots = seeds; "
                  "dashed = published baselines", fontsize=10)
     _save(fig, path)

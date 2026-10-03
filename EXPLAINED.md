@@ -216,6 +216,19 @@ Validation split only (524 images); mean ± sample std over seeds 0-2. Checkpoin
 same circuit without entanglement, 5 seeds each.
 
 <!-- results:compare -->
+**A = Hybrid 8q x 1L, B = Classical control (8 units)**
+
+| Metric | Mean A − B | Larger seed std | Ensemble 95% CI, A vs B | CIs overlap | Seeds where A > B | Verdict |
+|---|---|---|---|---|---|---|
+| AUC | -0.0031 | 0.0036 | [0.967, 0.989] vs [0.971, 0.989] | yes | 0 of 5 | **no significant difference** |
+| ACC | -0.0151 | 0.0282 | [0.904, 0.946] vs [0.921, 0.958] | yes | 1 of 5 | **no significant difference** |
+
+**A = Hybrid 8q x 1L, B = Hybrid 8q x 1L, no entanglement**
+
+| Metric | Mean A − B | Larger seed std | Ensemble 95% CI, A vs B | CIs overlap | Seeds where A > B | Verdict |
+|---|---|---|---|---|---|---|
+| AUC | -0.0022 | 0.0036 | [0.967, 0.989] vs [0.970, 0.990] | yes | 2 of 5 | **no significant difference** |
+| ACC | -0.0115 | 0.0282 | [0.904, 0.946] vs [0.909, 0.950] | yes | 1 of 5 | **no significant difference** |
 <!-- /results:compare -->
 
 What these tables mean is discussed in [REPORT.md](REPORT.md).

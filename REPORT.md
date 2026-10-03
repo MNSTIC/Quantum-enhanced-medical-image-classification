@@ -86,19 +86,53 @@ SWEEP_DISCUSSION
 ## 6. Results on the test set
 
 <!-- results:main -->
+| Model | Params: total / middle block (effective) | Seeds | Test AUC | Test ACC | Sensitivity | Specificity | Balanced acc. | Ensemble AUC [95% CI] | Ensemble ACC [95% CI] |
+|---|---|---|---|---|---|---|---|---|---|
+| Hybrid 8q x 1L | 60,953 / 24 (16) | 5 | 0.975 ± 0.004 | 0.916 ± 0.028 | 0.971 ± 0.016 | 0.823 ± 0.095 | 0.897 ± 0.041 | 0.979 [0.967, 0.989] | 0.925 [0.904, 0.946] |
+| Classical control (8 units) | 61,001 / 72 (72) | 5 | 0.978 ± 0.003 | 0.931 ± 0.016 | 0.966 ± 0.016 | 0.872 ± 0.058 | 0.919 ± 0.024 | 0.981 [0.971, 0.989] | 0.941 [0.921, 0.958] |
+| Hybrid 8q x 1L, no entanglement | 60,953 / 24 (16) | 5 | 0.977 ± 0.003 | 0.927 ± 0.010 | 0.975 ± 0.010 | 0.848 ± 0.041 | 0.911 ± 0.016 | 0.981 [0.970, 0.990] | 0.931 [0.909, 0.950] |
+
+Mean ± sample standard deviation over seeds; ACC, sensitivity and specificity at threshold 0.5. Ensemble = average of the seeds' probabilities; CI = 2,000 bootstrap resamples of the 624 test images. 'Effective' excludes the last-layer RZ angles that provably cannot affect the circuit output.
 <!-- /results:main -->
 
 <!-- results:target -->
+Target (beat ResNet-18 at 28x28, AUC 0.944 / ACC 0.854): Hybrid 8q x 1L mean test AUC 0.975 (+0.031), ACC 0.916 (+0.062) over 5 seeds: **met**.
 <!-- /results:target -->
 
 Per seed (validation AUC shown for comparison):
 
 <!-- results:seeds -->
+| Model | Metric | seed 0 | seed 1 | seed 2 | seed 3 | seed 4 |
+|---|---|---|---|---|---|---|
+| Hybrid 8q x 1L | val AUC | 0.995 | 0.996 | 0.996 | 0.995 | 0.996 |
+| Hybrid 8q x 1L | test AUC | 0.971 | 0.976 | 0.971 | 0.980 | 0.975 |
+| Hybrid 8q x 1L | test ACC | 0.897 | 0.925 | 0.877 | 0.946 | 0.934 |
+| Hybrid 8q x 1L | test sensitivity | 0.969 | 0.985 | 0.990 | 0.962 | 0.951 |
+| Hybrid 8q x 1L | test specificity | 0.778 | 0.825 | 0.688 | 0.919 | 0.906 |
+| Classical control (8 units) | val AUC | 0.996 | 0.996 | 0.996 | 0.996 | 0.996 |
+| Classical control (8 units) | test AUC | 0.975 | 0.978 | 0.974 | 0.981 | 0.981 |
+| Classical control (8 units) | test ACC | 0.925 | 0.942 | 0.905 | 0.944 | 0.938 |
+| Classical control (8 units) | test sensitivity | 0.946 | 0.959 | 0.987 | 0.977 | 0.962 |
+| Classical control (8 units) | test specificity | 0.889 | 0.915 | 0.769 | 0.889 | 0.897 |
+| Hybrid 8q x 1L, no entanglement | val AUC | 0.997 | 0.997 | 0.996 | 0.996 | 0.995 |
+| Hybrid 8q x 1L, no entanglement | test AUC | 0.980 | 0.974 | 0.975 | 0.975 | 0.981 |
+| Hybrid 8q x 1L, no entanglement | test ACC | 0.928 | 0.929 | 0.912 | 0.928 | 0.939 |
+| Hybrid 8q x 1L, no entanglement | test sensitivity | 0.977 | 0.979 | 0.985 | 0.974 | 0.959 |
+| Hybrid 8q x 1L, no entanglement | test specificity | 0.846 | 0.846 | 0.791 | 0.850 | 0.906 |
 <!-- /results:seeds -->
 
 Published baselines for reference (different models and protocol; they are context, not a matched comparison):
 
 <!-- results:baselines -->
+| Published method (MedMNIST v2, Table 3) | Test AUC | Test ACC |
+|---|---|---|
+| ResNet-18 (28x28) | 0.944 | 0.854 |
+| ResNet-18 (224x224) | 0.956 | 0.864 |
+| ResNet-50 (28x28) | 0.948 | 0.854 |
+| ResNet-50 (224x224) | 0.962 | 0.884 |
+| auto-sklearn | 0.942 | 0.855 |
+| AutoKeras | 0.947 | 0.878 |
+| Google AutoML Vision | 0.991 | 0.946 |
 <!-- /results:baselines -->
 
 ![Test scores](figures/test_scores.png)
@@ -109,6 +143,19 @@ Published baselines for reference (different models and protocol; they are conte
 ### 6.1 Did the quantum layer help?
 
 <!-- results:compare -->
+**A = Hybrid 8q x 1L, B = Classical control (8 units)**
+
+| Metric | Mean A − B | Larger seed std | Ensemble 95% CI, A vs B | CIs overlap | Seeds where A > B | Verdict |
+|---|---|---|---|---|---|---|
+| AUC | -0.0031 | 0.0036 | [0.967, 0.989] vs [0.971, 0.989] | yes | 0 of 5 | **no significant difference** |
+| ACC | -0.0151 | 0.0282 | [0.904, 0.946] vs [0.921, 0.958] | yes | 1 of 5 | **no significant difference** |
+
+**A = Hybrid 8q x 1L, B = Hybrid 8q x 1L, no entanglement**
+
+| Metric | Mean A − B | Larger seed std | Ensemble 95% CI, A vs B | CIs overlap | Seeds where A > B | Verdict |
+|---|---|---|---|---|---|---|
+| AUC | -0.0022 | 0.0036 | [0.967, 0.989] vs [0.970, 0.990] | yes | 2 of 5 | **no significant difference** |
+| ACC | -0.0115 | 0.0282 | [0.904, 0.946] vs [0.909, 0.950] | yes | 1 of 5 | **no significant difference** |
 <!-- /results:compare -->
 
 COMPARE_DISCUSSION
@@ -129,6 +176,11 @@ NOISE_DISCUSSION
 ### 8.2 Trainable quanvolution front end
 
 <!-- results:quanv -->
+| Model | Params: total / middle block (effective) | Seeds | Test AUC | Test ACC | Sensitivity | Specificity | Balanced acc. | Ensemble AUC [95% CI] | Ensemble ACC [95% CI] |
+|---|---|---|---|---|---|---|---|---|---|
+| Conv 2x2 control | 56,853 / 20 (20) | 3 | 0.978 ± 0.000 | 0.932 ± 0.008 | 0.946 ± 0.003 | 0.909 ± 0.021 | 0.927 ± 0.010 | 0.980 [0.970, 0.988] | 0.941 [0.921, 0.958] |
+
+Mean ± sample standard deviation over seeds; ACC, sensitivity and specificity at threshold 0.5. Ensemble = average of the seeds' probabilities; CI = 2,000 bootstrap resamples of the 624 test images. 'Effective' excludes the last-layer RZ angles that provably cannot affect the circuit output.
 <!-- /results:quanv -->
 
 QUANV_DISCUSSION
@@ -143,6 +195,15 @@ S64_DISCUSSION
 ## 9. Compute
 
 <!-- results:timing -->
+| Model | Seeds | Mean epoch time (s) | Mean training run (min, 30 epochs) | Fastest run (min) |
+|---|---|---|---|---|
+| Hybrid 8q x 1L | 5 | 19.1 | 9.6 | 8.3 |
+| Classical control (8 units) | 5 | 11.7 | 5.8 | 3.6 |
+| Hybrid 8q x 1L, no entanglement | 5 | 17.1 | 8.5 | 8.2 |
+| Hybrid 8q x 3L | 5 | 24.6 | 12.3 | 6.6 |
+| Conv 2x2 control | 3 | 7.9 | 3.9 | 3.8 |
+
+CPU only, 2 PyTorch threads per run; up to 8 runs shared the 20-core CPU at once, so single-run times on an idle machine are shorter.
 <!-- /results:timing -->
 
 ## 10. Limitations
