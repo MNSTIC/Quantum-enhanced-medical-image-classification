@@ -68,6 +68,11 @@ class Config:
         return RUNS_DIR / self.run_name() / f"seed{self.seed}"
 
 
+# The hybrid configuration chosen in Phase 3 on validation data only (reason in DECISIONS.md).
+# Phase 4 trains it with 5 seeds; evaluate.py scores it on the test set.
+FINAL_HYBRID = Config(mode="hybrid", n_qubits=8, n_layers=3)
+
+
 def _str2bool(s: str) -> bool:
     if s.lower() in ("1", "true", "yes", "on"):
         return True

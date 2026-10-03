@@ -1,0 +1,30 @@
+{
+  "mode": "classical",
+  "n_qubits": 8,
+  "n_layers": 3,
+  "entangle": true,
+  "reupload": true,
+  "quanv_layers": 2,
+  "dropout": 0.3,
+  "size": 28,
+  "epochs": 30,
+  "batch_size": 64,
+  "lr_classical": 0.001,
+  "lr_quantum": 0.01,
+  "wd_classical": 0.0001,
+  "pct_start": 0.15,
+  "grad_clip": 1.0,
+  "seed": 0,
+  "threads": 2,
+  "name": "",
+  "versions": {
+    "python": "3.13.14",
+    "platform": "Windows-11-10.0.26300-SP0",
+    "torch": "2.14.1+cpu",
+    "pennylane": "0.45.1",
+    "medmnist": "3.0.2",
+    "numpy": "2.5.2",
+    "sklearn": "1.9.1"
+  },
+  "started": "2026-10-03T12:15:13"
+}
