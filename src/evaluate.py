@@ -639,7 +639,8 @@ def main() -> None:
             saved = RUNS_DIR / f"{key}_summary.csv"
             noise = noise_eval(cfg, args.workers) if args.noise else pd.read_csv(saved) if saved.exists() else None
             if noise is not None and "d_auc_mean" in noise:   # older summaries lack the paired columns
-                noise.to_csv(saved, index=False)
+                if args.noise:
+                    noise.to_csv(saved, index=False)   # only when recomputed; re-saving would just reformat floats
                 figures.noise_effects(noise, FIG_DIR / f"{key}.png", label(cfg))
                 sections[key] = noise_markdown(noise, len(seed_dirs(cfg)))
         if main_res:
