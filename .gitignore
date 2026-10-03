@@ -4,3 +4,8 @@ runs/*/**/*.pt
 __pycache__/
 *.pyc
 .pytest_cache/
+.venv-gpu/
+build/
+dist/
+*.spec
+QuantumPneumoniaLab.exe

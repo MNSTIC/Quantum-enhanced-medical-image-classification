@@ -16,7 +16,7 @@ import torch.nn as nn
 
 from config import Config, config_to_dict, parse_config
 from data import make_train_val_loaders
-from engine import compute_metrics, predict, train_one_epoch
+from engine import EMA, compute_metrics, predict, train_one_epoch
 from models import build_model, count_params, quantum_parameters
 from utils import library_versions, save_json, seed_everything
 
@@ -41,29 +41,43 @@ def train(cfg: Config, force: bool = False) -> dict | None:
         print(f"skip {out} (metrics.json exists; use --force to retrain)")
         return None
     out.mkdir(parents=True, exist_ok=True)
+    # Files derived from an earlier run in this folder would no longer match the new checkpoint;
+    # metrics.json goes first so an interrupted retrain is never mistaken for a finished one.
+    for stale in ("metrics.json", "history.csv", "val_predictions.csv", "val_predictions_tta.csv",
+                  "test_predictions.csv", "test_predictions_tta.csv", "test_metrics.json", "test_metrics_tta.json",
+                  "noise_predictions.csv"):
+        (out / stale).unlink(missing_ok=True)
     torch.set_num_threads(cfg.threads)
     seed_everything(cfg.seed)
     save_json({**config_to_dict(cfg), "versions": library_versions(),
                "started": datetime.now().isoformat(timespec="seconds")}, out / "config.json")
 
     train_loader, val_loader, pw = make_train_val_loaders(cfg)
-    model = build_model(cfg)
+    model = build_model(cfg).to(cfg.device)
     opt = make_optimizer(model, cfg)
     sched = torch.optim.lr_scheduler.OneCycleLR(
         opt, max_lr=[g["lr"] for g in opt.param_groups],
         total_steps=cfg.epochs * len(train_loader), pct_start=cfg.pct_start)
     # pos_weight < 1 down-weights the majority class (pneumonia) so both classes count equally.
-    loss_fn = nn.BCEWithLogitsLoss(pos_weight=torch.tensor(pw))
+    loss_fn = nn.BCEWithLogitsLoss(pos_weight=torch.tensor(pw, device=cfg.device))
+    ema, eval_model = None, model
+    if cfg.ema:
+        ema = EMA(model, cfg.ema)
+        with torch.random.fork_rng():   # building a second model must not shift the training random stream
+            eval_model = build_model(cfg).to(cfg.device)
     print(f"{out.relative_to(out.parents[2])}: {count_params(model):,} params "
-          f"({count_params(model.probe)} in probed block), pos_weight {pw:.3f}")
+          f"({count_params(model.probe)} in probed block), pos_weight {pw:.3f}, "
+          f"{cfg.epochs} epochs on {cfg.device}", flush=True)
 
     # Checkpoint rule, fixed before any run: best validation AUC, ties broken by lower validation loss.
     best = {"val_auc": -1.0, "val_loss": float("inf")}
     history, best_probs, t_start = [], None, time.time()
     for epoch in range(1, cfg.epochs + 1):
         t0 = time.time()
-        tr = train_one_epoch(model, train_loader, opt, sched, loss_fn, cfg.grad_clip)
-        p, y, val_loss = predict(model, val_loader, loss_fn)
+        tr = train_one_epoch(model, train_loader, opt, sched, loss_fn, cfg.grad_clip, cfg.device, ema)
+        if ema is not None:
+            eval_model.load_state_dict(ema.state)   # validate (and checkpoint) the averaged weights
+        p, y, val_loss = predict(eval_model, val_loader, loss_fn, cfg.device)
         vm = compute_metrics(y, p)
         row = {"epoch": epoch, **{f"lr_{k}": g["lr"] for k, g in zip(("classical", "quantum"), opt.param_groups)}, **tr,
                "val_loss": val_loss, "val_auc": vm["auc"], "val_acc": vm["acc"], "epoch_s": time.time() - t0}
@@ -72,12 +86,12 @@ def train(cfg: Config, force: bool = False) -> dict | None:
         if improved:
             best = {"best_epoch": epoch, "val_loss": val_loss, **{f"val_{k}": v for k, v in vm.items()}}
             best_probs = p
-            torch.save(model.state_dict(), out / "best.pt")   # state_dict only: TorchLayer models cannot be pickled whole
+            torch.save(eval_model.state_dict(), out / "best.pt")   # state_dict only: TorchLayer models cannot be pickled whole
         print(f"  ep {epoch:2d}  loss {tr['train_loss']:.4f}  acc {tr['train_acc']:.3f} | "
               f"val loss {val_loss:.4f}  auc {vm['auc']:.4f}  acc {vm['acc']:.3f} | "
               f"grad {tr['probe_grad_norm']:.2e} | {row['epoch_s']:.1f}s{'  *' if improved else ''}", flush=True)
+        pd.DataFrame(history).to_csv(out / "history.csv", index=False)   # every epoch, so progress is visible live
 
-    pd.DataFrame(history).to_csv(out / "history.csv", index=False)
     pd.DataFrame({"label": y, "prob": best_probs}).to_csv(out / "val_predictions.csv", index_label="index")
     metrics = {**best, "n_params": count_params(model), "n_params_probe": count_params(model.probe),
                "train_s": time.time() - t_start, "epoch_s_mean": float(pd.DataFrame(history)["epoch_s"].mean())}

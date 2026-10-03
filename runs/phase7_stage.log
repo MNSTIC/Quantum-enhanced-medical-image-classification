@@ -1,0 +1,11 @@
+['phase7']: 10 jobs, 0 already done, running 10 with 7 workers
+hybrid_q8_l1_e60_ema0.998/seed0: ok, 19.9 min
+hybrid_q8_l1_e60_ema0.998/seed1: ok, 19.8 min
+hybrid_q8_l1_e60_ema0.998/seed2: ok, 19.9 min
+hybrid_q8_l1_e60_ema0.998/seed3: ok, 19.8 min
+hybrid_q8_l1_e60_ema0.998/seed4: ok, 19.9 min
+classical_q8_e60_ema0.998/seed0: ok, 14.4 min
+classical_q8_e60_ema0.998/seed1: ok, 14.4 min
+classical_q8_e60_ema0.998/seed2: ok, 11.1 min
+classical_q8_e60_ema0.998/seed3: ok, 11.1 min
+classical_q8_e60_ema0.998/seed4: ok, 7.5 min

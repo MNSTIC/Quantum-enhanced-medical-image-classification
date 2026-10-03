@@ -206,6 +206,17 @@ Mean ± sample standard deviation over seeds; ACC, sensitivity and specificity a
 | ACC | -0.0144 | 0.0225 | [0.897, 0.941] vs [0.921, 0.958] | yes | 1 of 5 | **no significant difference** |
 <!-- /results:matched -->
 
+### 6.3 Secondary: a threshold tuned on validation data
+
+<!-- results:threshold -->
+<!-- /results:threshold -->
+
+Moving the decision threshold away from 0.5 using validation data does **not** help, as the brief's prototype
+had warned. Validation is almost perfectly separable, so the "best" threshold is poorly determined (its spread
+across seeds is very large for the hybrid), and the tuned thresholds sit below 0.5. Lowering the threshold buys
+a little sensitivity but loses more specificity on the test set, whose class balance differs from validation,
+so accuracy falls for most models. The fixed 0.5 threshold stays the headline.
+
 ## 7. Ablations
 
 **Entanglement (Phase 4, test set; second table in Section 6.1).** Removing every CNOT did not hurt. The
@@ -338,6 +349,41 @@ backbone, augmentation and 30-epoch schedule were designed for 28 x 28 and were 
 would have meant selecting on these results), so this says only that more pixels are not free accuracy for
 this small network, not that 64 x 64 images carry less information.
 
+### 8.4 Post-hoc improvements (Phase 7)
+
+After the main study, two standard improvements were tried on the hybrid and the control alike: a longer
+schedule with weight averaging (*v2*: 60 epochs, exponential moving average of the weights) and test-time
+augmentation (*TTA*: the probability averaged over seven slightly shifted or rotated views). The decision rule
+was written into `DECISIONS.md` before any Phase 7 number was computed, and applied on validation data only:
+
+<!-- results:phase7_val -->
+<!-- /results:phase7_val -->
+
+Both candidates passed the validation rule. Because the test set had already been read in Phase 4, the test
+scores below are **exploratory**: they are reported whatever the validation verdict and do not replace the
+headline result.
+
+<!-- results:phase7 -->
+<!-- /results:phase7 -->
+
+Two lessons.
+
+1. **The longer schedule with weight averaging is a real improvement**, most clearly for the classical control:
+   higher test AUC and accuracy and a much smaller spread across seeds. For the hybrid it raises accuracy, while
+   its AUC stays the same on average and varies more between seeds. The strongest model of the whole project is
+   therefore the classical control trained with recipe v2.
+2. **Test-time augmentation looked better on validation and was worse on test.** It lowered validation loss for
+   both models, so the pre-declared rule adopted it, yet it lowered test accuracy for every model, at unchanged
+   AUC. Averaging over shifted views nudges the probabilities towards "pneumonia": validation (74% pneumonia)
+   rewards that, the test set (62.5% pneumonia) punishes it with false alarms on normal X-rays, as the drop in
+   specificity shows. It is the same validation-to-test shift that defeated the tuned threshold (Section 6.3):
+   on this dataset, anything that moves the operating point does not carry over from validation to test. The
+   rule said adopt, the test set disagreed, and both facts are reported rather than the rule being changed
+   after the fact.
+
+The quantum-vs-classical answer is the same under every variant: no significant difference by the fixed rule,
+and the classical control has the higher mean AUC in all four.
+
 ## 9. Training diagnostics and compute
 
 Circuit gradients (barren-plateau check):
@@ -349,6 +395,7 @@ Circuit gradients (barren-plateau check):
 | hybrid_q4_l3 | 3 | 1.5e-02 | 6.4e-02 | 3.1e-02 |
 | hybrid_q4_l5 | 3 | 1.8e-02 | 5.5e-02 | 4.1e-02 |
 | hybrid_q8_l1 | 5 | 1.1e-02 | 6.5e-02 | 3.5e-02 |
+| hybrid_q8_l1_e60_ema0.998 | 5 | 1.0e-02 | 7.6e-02 | 3.7e-02 |
 | hybrid_q8_l1_noent | 5 | 1.1e-02 | 2.7e-02 | 1.6e-02 |
 | hybrid_q8_l1_s64 | 5 | 1.2e-02 | 7.2e-02 | 4.3e-02 |
 | hybrid_q8_l3 | 5 | 5.6e-03 | 6.1e-02 | 3.0e-02 |
@@ -376,11 +423,25 @@ Training time:
 CPU only, 2 PyTorch threads per run; up to 8 runs shared the 20-core CPU at once, so single-run times on an idle machine are shorter.
 <!-- /results:timing -->
 
+CPU or GPU? The brief asks to time an epoch on each device and keep the faster one:
+
+<!-- results:devices -->
+<!-- /results:devices -->
+
+The GPU (RTX 5060, CUDA 13.0 build of the same PyTorch version, in a separate `.venv-gpu`) is faster for a
+single run, by a wide margin for the classical control but only modestly for the hybrid: at 8 qubits the
+simulator's per-call Python overhead, not arithmetic, dominates, as PennyLane's documentation warns. Every
+reported result nevertheless stays on the CPU: those runs were already complete and are bit-for-bit
+reproducible (a fresh retrain gives byte-identical predictions), whereas GPU arithmetic differs slightly.
+PennyLane needed one adjustment for the GPU (its starting state is created on the CPU); it is applied only to
+GPU inputs, so CPU results are untouched. The desktop app offers the GPU for single interactive runs.
+
 ## 10. Limitations
 
-- **Simulation only.** The circuit is simulated exactly on a CPU. No real quantum hardware was used, and
-  Section 8.1 shows only a crude model of hardware noise (depolarising channels; no readout error, no
-  device connectivity, no gate-specific errors).
+- **Simulation only.** The circuit is simulated exactly on a CPU. No real quantum hardware was used. Section 8.1
+  covers sampling noise, depolarising noise, unequal readout errors, gate-by-gate errors with damping, and
+  coherent angle miscalibration, but all at order-of-magnitude strengths, not calibrated to a real device, and
+  without crosstalk, leakage or the qubit-connectivity constraints of real chips.
 - **Small images and one dataset.** 28 x 28 greyscale images from a single public dataset. Nothing here
   says how the approach behaves at clinical resolution or on other hospitals' data.
 - **The CNN does most of the work.** About 60,000 of the 61,001 parameters are classical; the circuit sees
@@ -451,6 +512,19 @@ baselines are context, not a matched comparison.
 **Some papers report much higher hybrid accuracy on this dataset.** Their splits and model-selection
 protocols were not checked here, so they are not comparable; selecting on test data or reporting the best seed
 inflates accuracy by several points on this dataset, as the per-seed table shows.
+
+**You improved the results after seeing the test set. Isn't that cheating?** Phase 7 came after the test set had
+been read, so it is labelled post-hoc and never replaces the headline. Its candidates were standard techniques
+fixed in advance, applied to both models, judged by a validation rule written down before any Phase 7 number
+existed, and every candidate's test score is shown, including the one that made things worse.
+
+**Why did test-time augmentation fail on test when it helped on validation?** It shifts the predictions towards
+"pneumonia". Validation has 74% pneumonia, so that looks good there; test has 62.5%, so it creates false alarms.
+Validation and test differ in class balance and source, and choices that move the operating point do not
+transfer between them (the tuned threshold fails for the same reason).
+
+**Would a GPU have been better?** For a single run, yes: modestly for the hybrid, by a wide margin for the
+control (generated table in Section 9). The results were kept on the CPU for bit-for-bit reproducibility.
 
 **Why five seeds and a bootstrap?** Single-seed test accuracy moves by several points between seeds (per-seed
 table), so no conclusion rests on one run. The seed standard deviation measures training randomness; the

@@ -1,0 +1,62 @@
+runs\hybrid_q8_l1_e60_ema0.998\seed4: 60,953 params (24 in probed block), pos_weight 0.347, 60 epochs on cpu
+  ep  1  loss 0.3388  acc 0.730 | val loss 0.3745  auc 0.1569  acc 0.742 | grad 1.78e-02 | 19.3s  *
+  ep  2  loss 0.3031  acc 0.831 | val loss 0.3461  auc 0.8005  acc 0.767 | grad 1.88e-02 | 20.4s  *
+  ep  3  loss 0.2695  acc 0.871 | val loss 0.3290  auc 0.8855  acc 0.784 | grad 2.07e-02 | 21.2s  *
+  ep  4  loss 0.2261  acc 0.886 | val loss 0.3126  auc 0.9256  acc 0.876 | grad 2.92e-02 | 20.7s  *
+  ep  5  loss 0.1786  acc 0.906 | val loss 0.3076  auc 0.9421  acc 0.861 | grad 3.22e-02 | 22.0s  *
+  ep  6  loss 0.1526  acc 0.904 | val loss 0.3591  auc 0.9444  acc 0.742 | grad 4.21e-02 | 21.6s  *
+  ep  7  loss 0.1247  acc 0.922 | val loss 0.3359  auc 0.9657  acc 0.752 | grad 4.36e-02 | 20.6s  *
+  ep  8  loss 0.1178  acc 0.921 | val loss 0.4169  auc 0.5322  acc 0.742 | grad 4.21e-02 | 21.3s
+  ep  9  loss 0.1020  acc 0.926 | val loss 0.3014  auc 0.9846  acc 0.798 | grad 4.01e-02 | 21.8s  *
+  ep 10  loss 0.0982  acc 0.932 | val loss 0.2485  auc 0.9851  acc 0.893 | grad 4.74e-02 | 19.3s  *
+  ep 11  loss 0.0913  acc 0.938 | val loss 0.1948  auc 0.9873  acc 0.926 | grad 4.85e-02 | 19.1s  *
+  ep 12  loss 0.0862  acc 0.936 | val loss 0.2706  auc 0.9885  acc 0.834 | grad 4.53e-02 | 22.1s  *
+  ep 13  loss 0.0836  acc 0.939 | val loss 0.1560  auc 0.9887  acc 0.947 | grad 5.33e-02 | 18.5s  *
+  ep 14  loss 0.0809  acc 0.946 | val loss 0.1509  auc 0.9902  acc 0.945 | grad 5.03e-02 | 20.5s  *
+  ep 15  loss 0.0803  acc 0.941 | val loss 0.1205  auc 0.9914  acc 0.956 | grad 5.75e-02 | 21.5s  *
+  ep 16  loss 0.0812  acc 0.940 | val loss 0.1094  auc 0.9916  acc 0.954 | grad 6.60e-02 | 22.0s  *
+  ep 17  loss 0.0703  acc 0.946 | val loss 0.2648  auc 0.9917  acc 0.866 | grad 5.34e-02 | 18.9s  *
+  ep 18  loss 0.0719  acc 0.951 | val loss 0.1007  auc 0.9915  acc 0.958 | grad 5.89e-02 | 19.5s
+  ep 19  loss 0.0721  acc 0.950 | val loss 0.0929  auc 0.9924  acc 0.924 | grad 6.06e-02 | 21.1s  *
+  ep 20  loss 0.0696  acc 0.949 | val loss 0.0758  auc 0.9914  acc 0.939 | grad 5.58e-02 | 17.9s
+  ep 21  loss 0.0708  acc 0.948 | val loss 0.1236  auc 0.9933  acc 0.952 | grad 6.82e-02 | 24.6s  *
+  ep 22  loss 0.0695  acc 0.951 | val loss 0.1230  auc 0.9930  acc 0.948 | grad 6.10e-02 | 22.4s
+  ep 23  loss 0.0631  acc 0.954 | val loss 0.0860  auc 0.9936  acc 0.960 | grad 6.07e-02 | 22.1s  *
+  ep 24  loss 0.0642  acc 0.954 | val loss 0.0623  auc 0.9940  acc 0.950 | grad 6.38e-02 | 16.7s  *
+  ep 25  loss 0.0582  acc 0.956 | val loss 0.2439  auc 0.9856  acc 0.704 | grad 5.42e-02 | 23.5s
+  ep 26  loss 0.0578  acc 0.960 | val loss 0.1180  auc 0.9940  acc 0.865 | grad 5.87e-02 | 17.5s
+  ep 27  loss 0.0575  acc 0.958 | val loss 0.1267  auc 0.9932  acc 0.836 | grad 6.07e-02 | 14.6s
+  ep 28  loss 0.0593  acc 0.955 | val loss 0.1391  auc 0.9901  acc 0.830 | grad 6.23e-02 | 13.4s
+  ep 29  loss 0.0552  acc 0.962 | val loss 0.0960  auc 0.9943  acc 0.964 | grad 6.19e-02 | 11.9s  *
+  ep 30  loss 0.0556  acc 0.958 | val loss 0.0481  auc 0.9946  acc 0.968 | grad 5.98e-02 | 14.8s  *
+  ep 31  loss 0.0556  acc 0.964 | val loss 0.1604  auc 0.9881  acc 0.794 | grad 6.42e-02 | 17.7s
+  ep 32  loss 0.0524  acc 0.961 | val loss 0.1637  auc 0.9889  acc 0.794 | grad 5.45e-02 | 22.7s
+  ep 33  loss 0.0576  acc 0.956 | val loss 0.0534  auc 0.9951  acc 0.977 | grad 6.04e-02 | 17.9s  *
+  ep 34  loss 0.0447  acc 0.969 | val loss 0.1060  auc 0.9941  acc 0.889 | grad 4.78e-02 | 15.7s
+  ep 35  loss 0.0493  acc 0.966 | val loss 0.0980  auc 0.9943  acc 0.895 | grad 4.88e-02 | 17.0s
+  ep 36  loss 0.0561  acc 0.961 | val loss 0.4465  auc 0.9300  acc 0.565 | grad 7.59e-02 | 18.2s
+  ep 37  loss 0.0475  acc 0.965 | val loss 0.0791  auc 0.9955  acc 0.922 | grad 5.83e-02 | 17.1s  *
+  ep 38  loss 0.0460  acc 0.965 | val loss 0.1902  auc 0.9856  acc 0.773 | grad 4.62e-02 | 20.0s
+  ep 39  loss 0.0464  acc 0.963 | val loss 0.1800  auc 0.9856  acc 0.788 | grad 4.73e-02 | 24.3s
+  ep 40  loss 0.0448  acc 0.968 | val loss 0.0851  auc 0.9941  acc 0.912 | grad 5.76e-02 | 19.7s
+  ep 41  loss 0.0436  acc 0.969 | val loss 0.1455  auc 0.9894  acc 0.840 | grad 5.62e-02 | 20.4s
+  ep 42  loss 0.0451  acc 0.966 | val loss 0.4481  auc 0.8911  acc 0.594 | grad 5.83e-02 | 19.8s
+  ep 43  loss 0.0396  acc 0.973 | val loss 0.1099  auc 0.9921  acc 0.887 | grad 4.48e-02 | 17.4s
+  ep 44  loss 0.0424  acc 0.971 | val loss 0.3516  auc 0.9421  acc 0.658 | grad 5.40e-02 | 15.2s
+  ep 45  loss 0.0392  acc 0.972 | val loss 0.1941  auc 0.9774  acc 0.784 | grad 4.79e-02 | 20.3s
+  ep 46  loss 0.0422  acc 0.969 | val loss 0.1292  auc 0.9895  acc 0.861 | grad 5.00e-02 | 23.0s
+  ep 47  loss 0.0402  acc 0.970 | val loss 0.1673  auc 0.9830  acc 0.823 | grad 6.17e-02 | 19.9s
+  ep 48  loss 0.0373  acc 0.970 | val loss 0.1003  auc 0.9922  acc 0.895 | grad 4.55e-02 | 20.9s
+  ep 49  loss 0.0385  acc 0.970 | val loss 0.2799  auc 0.9626  acc 0.706 | grad 5.26e-02 | 14.8s
+  ep 50  loss 0.0391  acc 0.974 | val loss 0.1555  auc 0.9840  acc 0.840 | grad 4.81e-02 | 15.1s
+  ep 51  loss 0.0371  acc 0.972 | val loss 0.3091  auc 0.9476  acc 0.691 | grad 5.29e-02 | 14.5s
+  ep 52  loss 0.0400  acc 0.970 | val loss 0.1158  auc 0.9894  acc 0.884 | grad 5.11e-02 | 15.5s
+  ep 53  loss 0.0356  acc 0.975 | val loss 0.1733  auc 0.9812  acc 0.819 | grad 4.91e-02 | 22.4s
+  ep 54  loss 0.0382  acc 0.972 | val loss 0.1174  auc 0.9904  acc 0.884 | grad 5.77e-02 | 21.9s
+  ep 55  loss 0.0332  acc 0.977 | val loss 0.0983  auc 0.9920  acc 0.893 | grad 5.01e-02 | 16.3s
+  ep 56  loss 0.0365  acc 0.974 | val loss 0.0851  auc 0.9935  acc 0.912 | grad 5.89e-02 | 21.6s
+  ep 57  loss 0.0354  acc 0.978 | val loss 0.0667  auc 0.9952  acc 0.939 | grad 4.90e-02 | 19.3s
+  ep 58  loss 0.0357  acc 0.975 | val loss 0.0800  auc 0.9939  acc 0.916 | grad 5.16e-02 | 26.0s
+  ep 59  loss 0.0340  acc 0.976 | val loss 0.0647  auc 0.9956  acc 0.939 | grad 4.29e-02 | 26.5s  *
+  ep 60  loss 0.0402  acc 0.972 | val loss 0.0567  auc 0.9961  acc 0.947 | grad 5.96e-02 | 22.1s  *
+done: best epoch 60, val AUC 0.9961, val ACC 0.947, 19.6 min

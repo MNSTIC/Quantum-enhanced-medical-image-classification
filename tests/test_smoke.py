@@ -15,8 +15,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from config import Config  # noqa: E402
 from data import EXPECTED_COUNTS, load_split, make_train_val_loaders, pos_weight  # noqa: E402
+from engine import shift, tta_views  # noqa: E402
 from models import build_model, quantum_parameters  # noqa: E402
-from quantum import make_quantum_layer  # noqa: E402
+from quantum import HardwareNoise, make_quantum_layer  # noqa: E402
 from train import make_optimizer  # noqa: E402
 
 torch.set_num_threads(2)
@@ -81,6 +82,31 @@ def test_one_layer_circuit_has_closed_form(entangle):
     if entangle:
         c = torch.stack([c[:, 1:].prod(1)] + [c[:, :k + 1].prod(1) for k in range(1, 8)], dim=1)
     assert torch.allclose(out, c, atol=1e-5)
+
+
+@pytest.mark.parametrize("n_layers,entangle", [(1, True), (2, True), (2, False)])
+def test_gate_by_gate_noise_circuit_matches_template(n_layers, entangle):
+    """The hand-written circuit used for hardware-noise checks equals the template version when the
+    noise is zero, and a readout error p_i scales <Z_i> by exactly (1 - 2 p_i)."""
+    torch.manual_seed(0)
+    exact = make_quantum_layer(4, n_layers, entangle=entangle)
+    x = angles(8, 4)
+    readout = (0.0, 0.05, 0.1, 0.2)
+    with torch.no_grad():
+        ref = exact(x)
+        for hw, expected in ((HardwareNoise(), ref), (HardwareNoise(readout=readout), ref * (1 - 2 * torch.tensor(readout)))):
+            noisy = make_quantum_layer(4, n_layers, entangle=entangle, diff_method=None, device="default.mixed", hw=hw)
+            noisy.load_state_dict(exact.state_dict())
+            assert torch.allclose(noisy(x).float(), expected, atol=1e-5)
+
+
+def test_tta_shift_moves_pixels_and_fills_black():
+    x = torch.arange(16.0).reshape(1, 1, 4, 4)
+    right = shift(x, 1, 0)
+    assert torch.equal(right[..., :, 1:], x[..., :, :-1]) and bool((right[..., :, 0] == -1).all())
+    up = shift(x, 0, -1)
+    assert torch.equal(up[..., :-1, :], x[..., 1:, :]) and bool((up[..., -1, :] == -1).all())
+    assert len(tta_views(x)) == 7 and all(v.shape == x.shape for v in tta_views(x))
 
 
 @pytest.mark.parametrize("mode", ["hybrid", "classical"])

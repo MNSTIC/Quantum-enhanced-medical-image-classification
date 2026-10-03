@@ -115,12 +115,18 @@ def save_data_figures() -> None:
 
 
 if __name__ == "__main__":
+    import argparse
+
+    ap = argparse.ArgumentParser(description="Download PneumoniaMNIST, check its class counts, draw data figures.")
+    ap.add_argument("--size", type=int, default=28, choices=(28, 64, 128, 224), help="image resolution to fetch")
+    size = ap.parse_args().size
     print(f"{'split':<6} {'images':>7} {'normal':>7} {'pneum.':>7} {'share':>6}")
     for split in ("train", "val"):   # test counts are asserted in evaluate.py, the only test reader
-        y = load_split(split).labels.reshape(-1)
+        y = load_split(split, size=size).labels.reshape(-1)
         print(f"{split:<6} {len(y):>7} {(y == 0).sum():>7} {(y == 1).sum():>7} {y.mean():>6.1%}")
-    imgs = load_split("train").imgs / 255.0
+    imgs = load_split("train", size=size).imgs / 255.0
     print(f"train pixel mean {imgs.mean():.3f}, std {imgs.std():.3f}")
-    print(f"pos_weight = {pos_weight(load_split('train').labels):.3f}")
-    save_data_figures()
-    print(f"figures saved to {FIG_DIR}")
+    print(f"pos_weight = {pos_weight(load_split('train', size=size).labels):.3f}")
+    if size == 28:
+        save_data_figures()
+        print(f"figures saved to {FIG_DIR}")

@@ -38,9 +38,11 @@ class Config:
     wd_classical: float = 1e-4
     pct_start: float = 0.15
     grad_clip: float = 1.0
+    ema: float = 0.0               # Phase 7: decay of an exponential moving average of the weights; 0 = off
     # --- bookkeeping ---
     seed: int = 0
     threads: int = 2               # torch CPU threads; 1 and 2 give bit-identical results, 4 does not
+    device: str = "cpu"            # "cpu" or "cuda"; every reported result uses the CPU (see DECISIONS.md)
     name: str = ""                 # run-group name; empty = derived from the settings (see run_name)
 
     def run_name(self) -> str:
@@ -62,6 +64,12 @@ class Config:
             n = "quanv_classical"
         if self.size != 28:
             n += f"_s{self.size}"
+        if self.epochs != 30:
+            n += f"_e{self.epochs}"
+        if self.ema:
+            n += f"_ema{self.ema:g}"
+        if self.device != "cpu":   # GPU arithmetic differs slightly, so GPU runs never share a CPU run's folder
+            n += f"_{self.device}"
         return n
 
     def run_dir(self) -> Path:

@@ -130,24 +130,20 @@ def sweep_bars(table: pd.DataFrame, path: Path) -> None:
     _save(fig, path)
 
 
-def noise_curves(df: pd.DataFrame, path: Path, model: str) -> None:
-    """Test AUC and ACC of the trained hybrid vs depolarising probability p (mean +- std over seeds).
+def noise_effects(df: pd.DataFrame, path: Path, model: str) -> None:
+    """Paired change in test AUC and ACC under each noise setting (dot = mean over seeds, bar = 1 std).
 
-    `df` rows: setting ('exact', 'shots=1000', 'p=0.001', ...), p, metric means and stds.
+    `df` rows come from evaluate.noise_eval: setting, category, d_auc_mean/std, d_acc_mean/std.
     """
-    fig, axes = plt.subplots(1, 2, figsize=(10, 4))
-    noisy = df[df["p"] > 0].sort_values("p")
+    rows = df[df["setting"] != "exact simulation"].iloc[::-1]   # first setting at the top
+    y = np.arange(len(rows))
+    fig, axes = plt.subplots(1, 2, figsize=(12, 0.42 * len(rows) + 1.8), sharey=True)
     for metric, ax in zip(("auc", "acc"), axes):
-        ax.errorbar(noisy["p"], noisy[f"{metric}_mean"], yerr=noisy[f"{metric}_std"], color=SERIES[0],
-                    marker="o", markersize=7, capsize=4, label="depolarising noise after each layer")
-        for (_, r), style in zip(df[df["p"] == 0].iterrows(), ("-", ":")):
-            ax.axhline(r[f"{metric}_mean"], color=INK2, linestyle=style, linewidth=1.2, label=r["setting"])
-        ax.set_xscale("log")
-        ax.set_xlabel("depolarising probability p per qubit per layer")
-        ax.set_title(f"Test {metric.upper()}")
-    fig.suptitle(f"{model}: trained model evaluated under finite shots and noise (no retraining), mean of seeds",
-                 fontsize=10)
-    fig.tight_layout(rect=(0, 0.1, 1, 1))   # leave room for the legend below the panels
-    fig.legend(*axes[0].get_legend_handles_labels(), loc="lower center", ncol=3, fontsize=9)
-    fig.savefig(path, dpi=150)
-    plt.close(fig)
+        ax.axvline(0, color=INK2, linewidth=1)
+        ax.errorbar(rows[f"d_{metric}_mean"], y, xerr=rows[f"d_{metric}_std"], fmt="o", color=SERIES[0],
+                    markersize=7, capsize=3, linewidth=1.2)
+        ax.set_title(f"Change in test {metric.upper()} vs exact simulation")
+        ax.set_xlabel("noisy minus exact, same seed")
+    axes[0].set_yticks(y, [f"{s}  ({c})" for s, c in zip(rows["setting"], rows["category"])], fontsize=8)
+    fig.suptitle(f"{model}: trained model under sampling, noise and miscalibration (no retraining)", fontsize=10)
+    _save(fig, path)

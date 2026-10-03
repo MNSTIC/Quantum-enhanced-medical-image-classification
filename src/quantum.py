@@ -10,15 +10,63 @@ quantum state, so PyTorch can backpropagate through every gate like through any 
 from __future__ import annotations
 
 import math
+from dataclasses import dataclass
 
 import pennylane as qml
 import torch
 import torch.nn as nn
 
 
+@dataclass(frozen=True)
+class HardwareNoise:
+    """A simple, gate-by-gate noise model for the Phase 5.1 / 7 robustness checks (evaluation only).
+
+    p1:      depolarising probability after every single-qubit gate (RY encoding and Rot)
+    p2:      depolarising probability on BOTH qubits after every CNOT (two-qubit gates are the noisiest)
+    gamma:   amplitude damping (energy loss, T1) and phase damping (dephasing, T2) per qubit per layer
+    readout: per-qubit probability that the measured bit is flipped (readout error)
+    These are order-of-magnitude stand-ins for a real device, not a calibrated model of one.
+    """
+    p1: float = 0.0
+    p2: float = 0.0
+    gamma: float = 0.0
+    readout: tuple[float, ...] = ()
+
+
+def _noisy_circuit(inputs, weights, n_qubits: int, n_layers: int, entangle: bool, reupload: bool,
+                   hw: HardwareNoise) -> None:
+    """The same gates as AngleEmbedding + StronglyEntanglingLayers, written out one by one so that
+    noise can follow each gate. tests/test_smoke.py checks that with zero noise it equals the template."""
+    def depolarise(p, wires):
+        if p > 0:
+            for w in wires:
+                qml.DepolarizingChannel(p, wires=w)
+
+    for layer in range(n_layers):
+        if reupload or layer == 0:
+            for w in range(n_qubits):
+                qml.RY(inputs[..., w], wires=w)   # inputs[..., w] keeps the batch dimension intact
+                depolarise(hw.p1, [w])
+        for w in range(n_qubits):
+            qml.Rot(weights[layer, w, 0], weights[layer, w, 1], weights[layer, w, 2], wires=w)
+            depolarise(hw.p1, [w])
+        if entangle:
+            for w in range(n_qubits):   # the ring StronglyEntanglingLayers uses: w -> w + 1, last -> first
+                qml.CNOT(wires=[w, (w + 1) % n_qubits])
+                depolarise(hw.p2, [w, (w + 1) % n_qubits])
+        if hw.gamma > 0:
+            for w in range(n_qubits):
+                qml.AmplitudeDamping(hw.gamma, wires=w)
+                qml.PhaseDamping(hw.gamma, wires=w)
+    for w, p in enumerate(hw.readout):
+        if p > 0:
+            qml.BitFlip(p, wires=w)   # a flipped measurement outcome, applied just before measuring Z
+
+
 def make_qnode(n_qubits: int, n_layers: int, entangle: bool = True, reupload: bool = True,
                diff_method: str | None = "backprop", device: str = "default.qubit",
-               noise_p: float = 0.0, shots: int | None = None, seed: int | None = None) -> qml.QNode:
+               noise_p: float = 0.0, shots: int | None = None, seed: int | None = None,
+               hw: HardwareNoise | None = None) -> qml.QNode:
     """Build the circuit as a QNode (a quantum function bound to a simulator).
 
     Training uses the defaults: exact state-vector simulation with backpropagation.
@@ -30,6 +78,15 @@ def make_qnode(n_qubits: int, n_layers: int, entangle: bool = True, reupload: bo
 
     @qml.qnode(dev, interface="torch", diff_method=diff_method)
     def circuit(inputs, weights):
+        if getattr(inputs, "is_cuda", False):
+            # GPU only: PennyLane builds the starting state |0...0> on the CPU, which clashes with GPU
+            # inputs, so prepare it on the inputs' device. Skipped on the CPU, so CPU results are unchanged.
+            start = torch.zeros(2 ** n_qubits, dtype=torch.complex64, device=inputs.device)
+            start[0] = 1
+            qml.StatePrep(start, wires=range(n_qubits))
+        if hw is not None:   # gate-by-gate noise model (needs device="default.mixed")
+            _noisy_circuit(inputs, weights, n_qubits, n_layers, entangle, reupload, hw)
+            return [qml.expval(qml.PauliZ(w)) for w in range(n_qubits)]
         # `inputs` has shape (batch, n_qubits). Templates such as AngleEmbedding treat the leading
         # dimension as a batch and simulate all images at once ("parameter broadcasting").
         # Never write inputs[i] here: that would pick image i, not feature i.

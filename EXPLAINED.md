@@ -257,3 +257,22 @@ same circuit without entanglement, 5 seeds each.
   every average. The quantum layer works, but it does not help.
 
 The full discussion, with the statistics, is in [REPORT.md](REPORT.md).
+
+## 11. Two later ideas, in plain words
+
+- **Weight averaging (EMA).** During training the weights jitter from batch to batch. Keeping a running average
+  of them (each step: 99.8% old average + 0.2% new weights) smooths that jitter out, and the averaged model
+  usually generalises a little better. Combined with twice the training time, it gave the best scores of the
+  project, for the classical control most of all.
+- **Test-time augmentation (TTA).** Show the model several slightly shifted or rotated copies of an image and
+  average its answers. It looked good on validation data but made accuracy worse on test data, because it nudges
+  answers towards "pneumonia" and the test set has proportionally more healthy children. A useful warning:
+  a trick that helps on one data split can hurt on another when the two are not alike.
+
+## 12. The desktop app
+
+`QuantumPneumoniaLab.exe` (or `.venv\Scripts\pythonw.exe app\main.py`) opens a window over all of the above.
+It does not have its own copy of the model: every button runs the project's own scripts, so what you see there
+is exactly what the command line produces. Good places to start: **Learn** (move the sliders and watch one qubit
+compute a shifted cosine), **Predict** with "Random validation image" (every step from pixels to probability, as
+bar charts), and **Train** (start a short run and watch the curves and the time left).

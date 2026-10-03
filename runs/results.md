@@ -23,6 +23,7 @@ Validation split only (524 images); mean ± sample std over seeds 0-2. Checkpoin
 | hybrid_q4_l3 | 3 | 1.5e-02 | 6.4e-02 | 3.1e-02 |
 | hybrid_q4_l5 | 3 | 1.8e-02 | 5.5e-02 | 4.1e-02 |
 | hybrid_q8_l1 | 5 | 1.1e-02 | 6.5e-02 | 3.5e-02 |
+| hybrid_q8_l1_e60_ema0.998 | 5 | 1.0e-02 | 7.6e-02 | 3.7e-02 |
 | hybrid_q8_l1_noent | 5 | 1.1e-02 | 2.7e-02 | 1.6e-02 |
 | hybrid_q8_l1_s64 | 5 | 1.2e-02 | 7.2e-02 | 4.3e-02 |
 | hybrid_q8_l3 | 5 | 5.6e-03 | 6.1e-02 | 3.0e-02 |
@@ -31,6 +32,24 @@ Validation split only (524 images); mean ± sample std over seeds 0-2. Checkpoin
 | hybrid_q8_l5 | 3 | 1.0e-02 | 4.5e-02 | 2.2e-02 |
 
 L2 norm of the circuit-angle gradients, averaged over the steps of each epoch (before clipping). A barren plateau would show as values collapsing towards zero.
+
+## phase7_val
+
+| Model | Variant | Seeds | Val AUC | Val loss | Δ val AUC vs v1 | Δ val loss vs v1 |
+|---|---|---|---|---|---|---|
+| hybrid | v1 | 5 | 0.9956 ± 0.0005 | 0.0600 ± 0.0084 | +0.0000 | +0.0000 |
+| hybrid | v1 + TTA | 5 | 0.9970 ± 0.0007 | 0.0515 ± 0.0112 | +0.0014 | -0.0085 |
+| hybrid | v2 | 5 | 0.9965 ± 0.0006 | 0.0505 ± 0.0129 | +0.0010 | -0.0095 |
+| hybrid | v2 + TTA | 5 | 0.9975 ± 0.0004 | 0.0409 ± 0.0065 | +0.0019 | -0.0191 |
+| classical | v1 | 5 | 0.9960 ± 0.0004 | 0.0588 ± 0.0134 | +0.0000 | +0.0000 |
+| classical | v1 + TTA | 5 | 0.9971 ± 0.0002 | 0.0442 ± 0.0061 | +0.0011 | -0.0146 |
+| classical | v2 | 5 | 0.9967 ± 0.0007 | 0.0486 ± 0.0090 | +0.0006 | -0.0102 |
+| classical | v2 + TTA | 5 | 0.9976 ± 0.0004 | 0.0351 ± 0.0030 | +0.0016 | -0.0236 |
+
+Validation only. v1 = the main recipe (30 epochs); v2 = 60 epochs + weight averaging (EMA); TTA = probability averaged over 7 shifted/rotated views. Rule fixed in advance: a candidate is adopted only if, for both the hybrid and the control, it lowers mean validation loss without lowering mean validation AUC.
+
+- **TTA: adopted** by that rule.
+- **recipe v2: adopted** by that rule.
 
 ## matched
 
@@ -157,26 +176,54 @@ Mean ± sample standard deviation over seeds; ACC, sensitivity and specificity a
 | AUC | -0.0071 | 0.0072 | [0.962, 0.985] vs [0.962, 0.985] | yes | 0 of 5 | **no significant difference** |
 | ACC | -0.0144 | 0.0216 | [0.904, 0.944] vs [0.913, 0.950] | yes | 1 of 5 | **no significant difference** |
 
-## noise
+## threshold
 
-| Circuit simulation | Test AUC | Test ACC | Δ AUC vs exact |
-|---|---|---|---|
-| exact simulation | 0.9748 ± 0.0036 | 0.916 ± 0.028 | +0.0000 |
-| shots=1000 | 0.9746 ± 0.0037 | 0.914 ± 0.031 | -0.0002 |
-| p=0.001 | 0.9748 ± 0.0036 | 0.916 ± 0.028 | +0.0000 |
-| p=0.01 | 0.9748 ± 0.0036 | 0.916 ± 0.028 | +0.0000 |
-| p=0.05 | 0.9748 ± 0.0036 | 0.915 ± 0.029 | +0.0000 |
+| Model | Val-tuned threshold | Test ACC at 0.5 | Test ACC at tuned | Sensitivity at tuned | Specificity at tuned | Balanced acc. at tuned | Ensemble ACC at tuned |
+|---|---|---|---|---|---|---|---|
+| Hybrid 8q x 1L | 0.444 ± 0.331 | 0.916 ± 0.028 | 0.919 ± 0.015 | 0.979 ± 0.007 | 0.818 ± 0.038 | 0.899 ± 0.020 | 0.925 (t = 0.409) |
+| Classical control (8 units) | 0.179 ± 0.089 | 0.931 ± 0.016 | 0.904 ± 0.026 | 0.987 ± 0.006 | 0.765 ± 0.074 | 0.876 ± 0.035 | 0.920 (t = 0.257) |
+| Hybrid 8q x 1L, no entanglement | 0.337 ± 0.187 | 0.927 ± 0.010 | 0.913 ± 0.015 | 0.986 ± 0.005 | 0.791 ± 0.046 | 0.889 ± 0.021 | 0.925 (t = 0.396) |
+| Hybrid 8q x 3L | 0.405 ± 0.210 | 0.916 ± 0.023 | 0.908 ± 0.019 | 0.988 ± 0.009 | 0.775 ± 0.066 | 0.881 ± 0.029 | 0.899 (t = 0.334) |
 
-Same trained weights, no retraining; mean ± std over 5 seeds. 'shots=1000': each <Z> estimated from 1,000 measurements. 'p=…': default.mixed simulator with a depolarising channel of probability p on every qubit after every layer.
+Secondary result. Each threshold is chosen on validation data only (largest sensitivity + specificity); the test set never influences it. The headline numbers keep the fixed 0.5 threshold.
 
-## noise_matched
+## phase7
 
-| Circuit simulation | Test AUC | Test ACC | Δ AUC vs exact |
-|---|---|---|---|
-| exact simulation | 0.9753 ± 0.0040 | 0.916 ± 0.023 | +0.0000 |
-| shots=1000 | 0.9755 ± 0.0039 | 0.918 ± 0.023 | +0.0003 |
-| p=0.001 | 0.9753 ± 0.0040 | 0.917 ± 0.022 | +0.0000 |
-| p=0.01 | 0.9754 ± 0.0039 | 0.916 ± 0.022 | +0.0001 |
-| p=0.05 | 0.9757 ± 0.0037 | 0.913 ± 0.028 | +0.0004 |
+**Post-hoc, exploratory**: the test set had already been read once (Phase 4). These rows are reported whatever the validation verdict, and none of them replaces the headline result.
 
-Same trained weights, no retraining; mean ± std over 5 seeds. 'shots=1000': each <Z> estimated from 1,000 measurements. 'p=…': default.mixed simulator with a depolarising channel of probability p on every qubit after every layer.
+| Model | Params: total / compared block (effective) | Seeds | Test AUC | Test ACC | Sensitivity | Specificity | Balanced acc. | Ensemble AUC [95% CI] | Ensemble ACC [95% CI] |
+|---|---|---|---|---|---|---|---|---|---|
+| Hybrid 8q x 1L | 60,953 / 24 (16) | 5 | 0.975 ± 0.004 | 0.916 ± 0.028 | 0.971 ± 0.016 | 0.823 ± 0.095 | 0.897 ± 0.041 | 0.979 [0.967, 0.989] | 0.925 [0.904, 0.946] |
+| Hybrid 8q x 1L + TTA | 60,953 / 24 (16) | 5 | 0.974 ± 0.002 | 0.891 ± 0.036 | 0.986 ± 0.011 | 0.733 ± 0.112 | 0.859 ± 0.051 | 0.977 [0.964, 0.987] | 0.910 [0.886, 0.933] |
+| Hybrid 8q x 1L, 60 epochs, EMA | 60,953 / 24 (16) | 5 | 0.975 ± 0.010 | 0.931 ± 0.014 | 0.968 ± 0.019 | 0.869 ± 0.064 | 0.918 ± 0.024 | 0.980 [0.967, 0.990] | 0.942 [0.923, 0.960] |
+| Hybrid 8q x 1L, 60 epochs, EMA + TTA | 60,953 / 24 (16) | 5 | 0.971 ± 0.016 | 0.915 ± 0.028 | 0.981 ± 0.014 | 0.806 ± 0.096 | 0.894 ± 0.041 | 0.976 [0.962, 0.988] | 0.925 [0.904, 0.946] |
+| Classical control (8 units) | 61,001 / 72 (72) | 5 | 0.978 ± 0.003 | 0.931 ± 0.016 | 0.966 ± 0.016 | 0.872 ± 0.058 | 0.919 ± 0.024 | 0.981 [0.971, 0.989] | 0.941 [0.921, 0.958] |
+| Classical control (8 units) + TTA | 61,001 / 72 (72) | 5 | 0.977 ± 0.003 | 0.915 ± 0.022 | 0.982 ± 0.011 | 0.804 ± 0.070 | 0.893 ± 0.031 | 0.980 [0.970, 0.989] | 0.918 [0.896, 0.939] |
+| Classical control (8 units), 60 epochs, EMA | 61,001 / 72 (72) | 5 | 0.982 ± 0.002 | 0.941 ± 0.006 | 0.971 ± 0.012 | 0.891 ± 0.023 | 0.931 ± 0.008 | 0.984 [0.975, 0.992] | 0.949 [0.931, 0.965] |
+| Classical control (8 units), 60 epochs, EMA + TTA | 61,001 / 72 (72) | 5 | 0.981 ± 0.002 | 0.927 ± 0.010 | 0.986 ± 0.007 | 0.830 ± 0.032 | 0.908 ± 0.014 | 0.982 [0.972, 0.991] | 0.929 [0.909, 0.949] |
+
+Mean ± sample standard deviation over seeds; ACC, sensitivity and specificity at threshold 0.5. Ensemble = average of the seeds' probabilities; CI = 2,000 bootstrap resamples of the 624 test images. Compared block = the 8 -> 8 middle block, or the 2x2 front end for the quanvolution models. 'Effective' excludes the last-layer RZ angles that provably cannot affect the circuit output.
+
+Hybrid vs classical control with the variant chosen on validation data (v2 + TTA):
+
+**A = Hybrid 8q x 1L, 60 epochs, EMA + TTA, B = Classical control (8 units), 60 epochs, EMA + TTA**
+
+| Metric | Mean A − B | Larger seed std | Ensemble 95% CI, A vs B | CIs overlap | Seeds where A > B | Verdict |
+|---|---|---|---|---|---|---|
+| AUC | -0.0104 | 0.0163 | [0.962, 0.988] vs [0.972, 0.991] | yes | 0 of 5 | **no significant difference** |
+| ACC | -0.0119 | 0.0280 | [0.904, 0.946] vs [0.909, 0.949] | yes | 2 of 5 | **no significant difference** |
+
+## devices
+
+| Model | Device | CPU threads | PyTorch build | Seconds per epoch |
+|---|---|---|---|---|
+| hybrid (final, 8q x 1L) | cpu | 2 | 2.14.1+cu130 | 5.52 |
+| classical control | cpu | 2 | 2.14.1+cu130 | 3.77 |
+| hybrid (final, 8q x 1L) | cpu | 8 | 2.14.1+cu130 | 4.18 |
+| classical control | cpu | 8 | 2.14.1+cu130 | 2.40 |
+| hybrid (final, 8q x 1L) | cuda (NVIDIA GeForce RTX 5060 Laptop GPU) | 2 | 2.14.1+cu130 | 3.69 |
+| classical control | cuda (NVIDIA GeForce RTX 5060 Laptop GPU) | 2 | 2.14.1+cu130 | 1.06 |
+| hybrid (final, 8q x 1L) | cuda (NVIDIA GeForce RTX 5060 Laptop GPU) | 8 | 2.14.1+cu130 | 3.57 |
+| classical control | cuda (NVIDIA GeForce RTX 5060 Laptop GPU) | 8 | 2.14.1+cu130 | 1.08 |
+
+One training epoch plus one validation pass, mean of epochs 2-3 (epoch 1 is warm-up), one run at a time. Every reported result was trained on the CPU with 2 threads, which is bit-for-bit reproducible; GPU arithmetic differs slightly.

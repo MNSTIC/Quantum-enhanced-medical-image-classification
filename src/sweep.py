@@ -33,6 +33,10 @@ STAGES: dict[str, tuple[list[Config], list[int]]] = {
     "quanv": ([Config(mode="quanv"), Config(mode="quanv_classical")], [0, 1, 2, 3, 4]),
     "s64": ([replace(FINAL_HYBRID, size=64), Config(mode="classical", n_qubits=FINAL_HYBRID.n_qubits, size=64)],
             [0, 1, 2, 3, 4]),
+    # Phase 7 (post-hoc improvement, declared before training): one candidate recipe, applied to the
+    # hybrid and its control alike: twice the epochs and an exponential moving average of the weights.
+    "phase7": ([replace(FINAL_HYBRID, epochs=60, ema=0.998),
+                Config(mode="classical", n_qubits=FINAL_HYBRID.n_qubits, epochs=60, ema=0.998)], [0, 1, 2, 3, 4]),
 }
 
 
@@ -61,6 +65,7 @@ if __name__ == "__main__":
     args = p.parse_args()
 
     jobs = [replace(s, seed=k) for stage in args.stage for s in STAGES[stage][0] for k in STAGES[stage][1]]
+    jobs = list({j.run_dir(): j for j in jobs}.values())   # one job per folder, even if two stages share a setting
     todo = [j for j in jobs if not (j.run_dir() / "metrics.json").exists()]
     print(f"{args.stage}: {len(jobs)} jobs, {len(jobs) - len(todo)} already done, running {len(todo)} "
           f"with {args.workers} workers", flush=True)

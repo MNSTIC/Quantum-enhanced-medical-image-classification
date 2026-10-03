@@ -16,39 +16,51 @@ import numpy as np
 import torch
 from PIL import Image
 
-from config import FINAL_HYBRID, RUNS_DIR, config_from_dict
+from config import FINAL_HYBRID, RUNS_DIR, Config, config_from_dict
 from data import CLASS_NAMES, make_transform
 from models import build_model
 from utils import load_json
 
 
 def load_image(path: Path) -> Image.Image:
+    """Greyscale, centre-cropped to a square (as MedMNIST prepared its images), not yet resized."""
     if path.suffix.lower() == ".npy":
         a = np.squeeze(np.load(path))
         if a.ndim != 2:
             raise ValueError(f"expected a 2-D greyscale array, got shape {a.shape}")
         if a.dtype != np.uint8:   # float image: assume values in [0, 1]
             a = (np.clip(a, 0, 1) * 255).round().astype(np.uint8)
-        return Image.fromarray(a, mode="L")
-    return Image.open(path).convert("L")
+        img = Image.fromarray(a, mode="L")
+    else:
+        img = Image.open(path).convert("L")
+    w, h = img.size
+    s = min(w, h)   # a non-square X-ray would otherwise be squashed when resized to a square
+    return img.crop(((w - s) // 2, (h - s) // 2, (w - s) // 2 + s, (h - s) // 2 + s))
 
 
-def predict_image(img: Image.Image, run: Path) -> float:
-    """P(pneumonia) from one checkpoint, or the mean over all seeds if `run` is a model folder."""
-    seed_dirs = [run] if (run / "best.pt").exists() else sorted(run.glob("seed*/best.pt"))
-    seed_dirs = [d if d.is_dir() else d.parent for d in seed_dirs]
+def load_models(run: Path) -> list[tuple[str, Config, torch.nn.Module]]:
+    """(seed folder name, config, model in eval mode) for one seed folder or every seed of a model folder."""
+    seed_dirs = [run] if (run / "best.pt").exists() else [p.parent for p in sorted(run.glob("seed*/best.pt"))]
     if not seed_dirs:
         raise FileNotFoundError(f"no best.pt under {run}; train first (python src/train.py)")
-    probs = []
+    models = []
     for d in seed_dirs:
         cfg = config_from_dict(load_json(d / "config.json"))
         model = build_model(cfg)
-        model.load_state_dict(torch.load(d / "best.pt"))     # weights only (state_dict)
-        model.eval()                                          # dropout off, batch norm in inference mode
-        x = make_transform(train=False)(img.resize((cfg.size, cfg.size), Image.BILINEAR)).unsqueeze(0)
-        with torch.no_grad():
-            probs.append(torch.sigmoid(model(x)).item())
-    return float(np.mean(probs))
+        model.load_state_dict(torch.load(d / "best.pt", map_location="cpu"))   # weights only (state_dict)
+        models.append((d.name, cfg, model.eval()))   # eval: dropout off, batch norm in inference mode
+    return models
+
+
+def to_tensor(img: Image.Image, size: int) -> torch.Tensor:
+    """Square greyscale image -> (1, 1, size, size) tensor, normalised exactly as in training."""
+    return make_transform(train=False)(img.resize((size, size), Image.BILINEAR)).unsqueeze(0)
+
+
+@torch.no_grad()
+def predict_image(img: Image.Image, models: list[tuple[str, Config, torch.nn.Module]]) -> list[float]:
+    """P(pneumonia) from each loaded model; their mean is the ensemble prediction."""
+    return [torch.sigmoid(m(to_tensor(img, cfg.size))).item() for _, cfg, m in models]
 
 
 if __name__ == "__main__":
@@ -57,6 +69,10 @@ if __name__ == "__main__":
     ap.add_argument("--run", type=Path, default=RUNS_DIR / FINAL_HYBRID.run_name(),
                     help="seed folder or model folder (default: all seeds of the final hybrid)")
     args = ap.parse_args()
-    p = predict_image(load_image(args.input), args.run)
-    print(f"P(pneumonia) = {p:.3f}  ->  {CLASS_NAMES[int(p > 0.5)]}  (threshold 0.5)")
+    models = load_models(args.run)
+    probs = predict_image(load_image(args.input), models)
+    for (name, _, _), q in zip(models, probs):
+        print(f"  {name}: {q:.3f}")
+    p = float(np.mean(probs))
+    print(f"P(pneumonia) = {p:.3f}  ->  {CLASS_NAMES[int(p > 0.5)]}  (threshold 0.5, mean of {len(probs)} model(s))")
     print("Study project only; not for diagnosis.")

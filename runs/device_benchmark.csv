@@ -1,0 +1,9 @@
+torch,device,threads,model,epoch_s,gpu
+2.14.1+cu130,cpu,2,"hybrid (final, 8q x 1L)",5.524217649999628,
+2.14.1+cu130,cpu,2,classical control,3.7665908500002843,
+2.14.1+cu130,cpu,8,"hybrid (final, 8q x 1L)",4.1778541000003315,
+2.14.1+cu130,cpu,8,classical control,2.3999509000004764,
+2.14.1+cu130,cuda,2,"hybrid (final, 8q x 1L)",3.6895876499984297,NVIDIA GeForce RTX 5060 Laptop GPU
+2.14.1+cu130,cuda,2,classical control,1.0642277999995713,NVIDIA GeForce RTX 5060 Laptop GPU
+2.14.1+cu130,cuda,8,"hybrid (final, 8q x 1L)",3.568377400000827,NVIDIA GeForce RTX 5060 Laptop GPU
+2.14.1+cu130,cuda,8,classical control,1.0838120499993238,NVIDIA GeForce RTX 5060 Laptop GPU

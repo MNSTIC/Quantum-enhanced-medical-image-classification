@@ -129,3 +129,72 @@ Every judgement call made while building this project, with the reason. Newest p
 - **64 x 64 runs use the final hybrid and its control unchanged** (the backbone ends in global average pooling,
   so it accepts any size), with 5 seeds. They are labelled 64 x 64 everywhere and are not compared with the
   28 x 28 baselines.
+
+## Phase 7: post-hoc improvements (written before any Phase 7 result was looked at)
+
+- **The test set has already been read once**, so anything tried after that is exploratory. To keep it honest:
+  (1) every candidate is applied to the hybrid *and* the classical control alike; (2) candidates are judged on
+  validation data only, by a rule fixed here; (3) test scores of the candidates are still reported, whatever
+  the validation verdict, and labelled "post-hoc" so they are never read as the headline result.
+- **Candidates**, chosen from standard practice, not from test results:
+  - *Recipe v2*: 60 epochs instead of 30, plus an exponential moving average (EMA, decay 0.998) of the weights,
+    which is validated and checkpointed instead of the raw weights. 5 seeds each for the final hybrid and the
+    classical control (`--stage phase7`).
+  - *Test-time augmentation (TTA)*: average the predicted probability over 7 views of each image (the image,
+    shifted by 2 pixels left/right/up/down, rotated by 5 degrees either way); no retraining.
+- **Rule**: a candidate is "adopted" only if, for both the hybrid and the control, it lowers the mean
+  validation loss without lowering the mean validation AUC (means over the same 5 seeds). Validation AUC is
+  saturated near 0.996, so validation loss is the more sensitive of the two.
+- **Outcome (added afterwards)**: the rule adopted both candidates. On the test set, recipe v2 helped and TTA
+  hurt accuracy (it shifts predictions towards pneumonia, which the test set's different class balance punishes).
+  The rule was not changed after seeing this; REPORT.md Section 8.4 reports all variants.
+- **Phase 7 runs use the same CPU / 2-thread setting** as everything else, so they are comparable with the main
+  runs. The EMA evaluation model is built inside `torch.random.fork_rng()`, so adding EMA does not shift the
+  random stream that drives training.
+
+## Second round: unfinished items, bugs, optimisation, desktop app
+
+- **Bugs fixed** (found by reviewing the code and by a fresh-clone run):
+  1. `train.py --force` left the previous run's `metrics.json`, history and test/noise predictions in place while
+     retraining, so an interrupted retrain looked finished and cached test predictions could belong to an old
+     checkpoint. Stale files are now deleted before training starts.
+  2. `history.csv` was written only at the end of a run, so progress could not be watched. It is now rewritten
+     after every epoch (`metrics.json` stays the "finished" marker).
+  3. `sweep.py` could queue the same run twice when two stages shared a setting; jobs are now unique per folder.
+  4. `predict.py` squashed non-square images; it now centre-crops to a square first, as MedMNIST did.
+  5. `evaluate.py` failed on a fresh clone for the 64 x 64 runs: the MedMNIST `Evaluator` only reads files from
+     disk, and nothing had downloaded the 64 x 64 file yet. It now goes through the data loader first.
+  6. `evaluate.py` crashed on a fresh clone because model weights are not in git; it now uses the committed
+     predictions when a checkpoint is absent.
+- **"Optimise without any loss" was checked, not assumed.** Profiling one hybrid training step (data 7 ms, CNN
+  21 ms, circuit 12 ms, backward 35 ms) showed no cheap hotspot: the time is spent in PyTorch operations, so on
+  the CPU there is no large lossless speed-up left. After all code changes, classical seed 0 was retrained from
+  scratch and its validation predictions came out byte-identical to the committed run (history identical
+  except wall-clock times), so the changes did not move any result. The real time savings are in orchestration:
+  the noise study now runs one process per seed (results do not depend on the number of processes, because every
+  seed's sampling is seeded and cached), and the GPU is available for single runs.
+- **GPU in a separate environment (`.venv-gpu`)**: installing CUDA PyTorch into `.venv` would replace the CPU build
+  that produced every committed result and could change its last digits. The GPU build is the same PyTorch
+  version (2.14.1) for CUDA 13.0, which supports the RTX 5060. PennyLane's `default.qubit` creates its starting
+  state on the CPU, which clashes with GPU inputs; `quantum.py` prepares |0...0> on the inputs' device, but only
+  when the inputs are on a GPU, so the CPU circuit (and every CPU result) is unchanged. CPU and GPU outputs of the
+  same circuit agree to about 3e-6.
+- **Threshold tuning**: Youden's J (sensitivity + specificity - 1) on each seed's validation predictions; ties
+  are common on the nearly separable validation set, so the median of the tied thresholds is used.
+- **Richer noise models**, all evaluation-only: unequal per-qubit readout errors (equal ones provably cannot change
+  AUC, see REPORT.md), a gate-by-gate model with single- and two-qubit depolarising errors plus amplitude and phase
+  damping, and coherent angle miscalibration. The gate-by-gate circuit is written out gate by gate so noise can
+  follow each gate; a test checks it equals the template circuit when the noise is zero, and that a readout error
+  p scales <Z> by exactly 1 - 2p. Strengths are order-of-magnitude stand-ins for current superconducting chips,
+  not a calibrated device model.
+- **Desktop app: tkinter (standard library) + matplotlib**, so it adds no runtime dependency. Heavy work always
+  runs through the project's own scripts as subprocesses; the app parses their output for progress and time left,
+  and "Stop" kills the whole process tree (a sweep starts one process per run). The app never opens the test
+  images: test counts shown in the Data tab are the documented ones.
+- **The .exe is a launcher, not a bundle.** Packing PyTorch and PennyLane into one executable would make a file of
+  well over a gigabyte that would also freeze a second copy of the code. The 8 MB launcher (PyInstaller, a
+  build-time tool only) starts `app/main.py` with the project's `.venv`, so the app always runs the current code.
+  It is not committed to git (`.gitignore`); `app/build_exe.py` rebuilds it.
+- **"Add / remove dataset"** is interpreted as (a) downloading, verifying or deleting PneumoniaMNIST at each
+  resolution, and (b) registering folders of one's own X-rays for batch prediction. Training on a different
+  dataset would change the experiment itself, so it is not offered.
