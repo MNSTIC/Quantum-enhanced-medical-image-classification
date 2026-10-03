@@ -15,7 +15,7 @@ caused by the quantum circuit. A validation-only sweep chose a 1-layer circuit (
 comparison. Everything runs on a laptop CPU; no quantum hardware or cloud is used.
 
 **Answer in one line:** the hybrid clears the published ResNet-18 baseline comfortably, but so does the
-classical control; the quantum layer matched it within noise and never beat it (details in
+classical control; the quantum layer matched it within noise and never beat it on mean AUC or accuracy (details in
 [REPORT.md](REPORT.md), Section 6).
 
 **Study project only. It must not be used for diagnosis.**

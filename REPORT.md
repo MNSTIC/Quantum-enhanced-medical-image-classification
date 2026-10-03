@@ -169,22 +169,23 @@ Published baselines for reference (different models and protocol; they are conte
 | ACC | -0.0115 | 0.0282 | [0.904, 0.946] vs [0.909, 0.950] | yes | 1 of 5 | **no significant difference** |
 <!-- /results:compare -->
 
-**No. The quantum layer matched the classical control within noise and was slightly worse in every point
-estimate.** By the decision rule fixed before the test set was read, there is no significant difference on
+**No. The quantum layer matched the classical control within noise and was slightly worse on mean AUC, mean
+accuracy and both ensemble scores.** By the decision rule fixed before the test set was read, there is no significant difference on
 either AUC or ACC: the mean differences are smaller than one seed standard deviation and the ensembles'
 confidence intervals overlap almost completely. The direction, however, is consistent: the classical control
 has the higher test AUC on every paired seed, the higher mean accuracy, and the better ensemble on both
-metrics. The honest summary is "statistically indistinguishable, never better".
+metrics; the hybrid's only edge is a marginally higher sensitivity, paid for with a clearly lower specificity.
+The honest summary is "statistically indistinguishable, and never ahead on the headline metrics".
 
 The secondary, parameter-matched comparison (Section 6.2) gives the same answer, so the result does not
 depend on the final hybrid having fewer parameters than the control.
 
 **Sensitivity versus specificity.** All models catch almost every pneumonia case in the test set (high
 sensitivity) and give most of their errors as false alarms on normal X-rays. The hybrid's specificity is lower
-and much more seed-dependent than the control's (see the per-seed table and the confusion matrices). For
+and more seed-dependent than the control's (see the per-seed table and the confusion matrices). For
 screening, high sensitivity is the property that matters most, because a missed pneumonia costs more than a
-second look at a healthy child; the price is extra false alarms. The low test specificity relative to
-validation is largely the dataset shift: the test split has proportionally more normal images, from a
+second look at a healthy child; the price is extra false alarms. The drop in specificity from validation to
+test is consistent with the dataset shift: the test split has proportionally more normal images, from a
 different collection, than the data the model and its threshold were fitted on.
 
 ### 6.2 Secondary: parameter-matched 8 x 3 circuit (72 vs 72)
@@ -222,10 +223,11 @@ returns
 a learned, phase-shifted cosine of its input with two effective parameters (the third angle has no effect,
 as noted in Section 3). Without CNOTs, these eight cosines *are* the outputs: the "quantum layer" is a
 sinusoidal activation function. With the CNOT ring, output k becomes the product c_0 c_1 ... c_k (and output 0
-the product c_1 ... c_7). Products of up to eight numbers of magnitude at most 1 shrink towards zero, so
-most entangled outputs carry little signal unless the network learns to keep every factor near +-1. That is
-a restrictive inductive bias rather than a useful one, which fits the ablation result. Deeper circuits with
-re-uploading have no such simple form, but the sweep found no validation benefit from depth either.
+the product c_1 ... c_7). Products of up to eight numbers of magnitude at most 1 shrink towards zero unless
+the network keeps every factor near +-1, so the entangled outputs are a more constrained set of features than
+the eight separate cosines. That restrictive inductive bias is a plausible reason why entanglement did not
+help; this study does not test it further. Deeper circuits with re-uploading have no such simple form, but
+the sweep found no validation benefit from depth either.
 
 **Re-uploading and depth (Phase 3, validation only).** Encoding the data once instead of before every layer,
 and using 1, 3 or 5 layers, made no difference beyond seed noise. With validation AUC saturated near its
@@ -394,8 +396,9 @@ CPU only, 2 PyTorch threads per run; up to 8 runs shared the 20-core CPU at once
 
 ## 11. Likely examiner questions
 
-**Did the quantum layer help?** No. It matched the classical control within noise and was slightly worse in
-every point estimate (Section 6.1); the parameter-matched circuit agrees (Section 6.2).
+**Did the quantum layer help?** No. It matched the classical control within noise and was slightly worse on
+mean AUC, mean accuracy and both ensemble scores (Section 6.1); the parameter-matched circuit agrees
+(Section 6.2), and so do the quanvolution and 64 x 64 extensions.
 
 **So where is the quantum advantage?** There is none, and this setup could not show one. Eight qubits are
 256 complex amplitudes, simulated exactly on a laptop; whatever the circuit computes, a classical program just
